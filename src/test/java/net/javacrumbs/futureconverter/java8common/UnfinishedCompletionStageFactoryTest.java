@@ -16,7 +16,7 @@ public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedComp
     }
 
     @Override
-    protected void finishCalculation(CompletionStage<String> completionStage) {
+    protected void finish(CompletionStage<String> completionStage) {
         ((DelayedSimpleCompletionStage)completionStage).executeDelayedAction();
     }
 

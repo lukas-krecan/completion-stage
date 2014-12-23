@@ -22,7 +22,7 @@ public class UnfinishedCompletableFutureTest extends AbstractUnfinishedCompletio
 
 
     @Override
-    protected void finishCalculation(CompletionStage c) {
+    protected void finish(CompletionStage c) {
         ((DelayedCompletableFuture) c).executeDelayedAction();
     }
 

@@ -38,13 +38,13 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
     public void acceptEitherTakesOtherValueIfTheFirstIsNotReady() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
-        finishCalculation(completionStage2);
+        finish(completionStage2);
 
         Consumer<String> consumer = mock(Consumer.class);
         completionStage.acceptEither(completionStage2, consumer);
 
         verify(consumer, times(1)).accept(VALUE2);
-        finishCalculation(completionStage);
+        finish(completionStage);
 
         verify(consumer, times(1)).accept(any(String.class));
     }
@@ -53,14 +53,14 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
     public void acceptEitherPropagatesExceptionFromSecondCompletable() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
-        finishCalculation(completionStage2);
+        finish(completionStage2);
 
         Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
-        finishCalculation(completionStage);
+        finish(completionStage);
 
         verifyZeroInteractions(consumer);
     }
@@ -69,14 +69,14 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
     public void acceptEitherPropagatesExceptionFromFirstCompletable() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
-        finishCalculation(completionStage);
+        finish(completionStage);
 
         Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
-        finishCalculation(completionStage2);
+        finish(completionStage2);
 
         verifyZeroInteractions(consumer);
     }
@@ -85,7 +85,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
     public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingFirsStage() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
-        finishCalculation(completionStage);
+        finish(completionStage);
 
         Consumer<String> consumer = s -> {
             throw EXCEPTION;
@@ -95,14 +95,14 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
-        finishCalculation(completionStage2);
+        finish(completionStage2);
     }
 
     @Test
     public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingSecondStage() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
-        finishCalculation(completionStage2);
+        finish(completionStage2);
 
         Consumer<String> consumer = s -> {
             throw EXCEPTION;
@@ -112,6 +112,6 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
-        finishCalculation(completionStage);
+        finish(completionStage);
     }
 }

@@ -18,7 +18,7 @@ public class FinishedCompletionStageFactoryTest extends AbstractCompletionStageT
     }
 
     @Override
-    protected void finishCalculation(CompletionStage<String> completionStage) {
+    protected void finish(CompletionStage<String> completionStage) {
 
     }
 }

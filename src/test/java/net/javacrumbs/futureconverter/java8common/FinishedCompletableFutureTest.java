@@ -24,7 +24,7 @@ public class FinishedCompletableFutureTest extends AbstractCompletionStageTest {
     }
 
     @Override
-    protected void finishCalculation(CompletionStage<String> completionStage) {
+    protected void finish(CompletionStage<String> completionStage) {
 
     }
 }
