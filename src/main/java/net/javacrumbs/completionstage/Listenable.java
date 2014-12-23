@@ -17,6 +17,15 @@ package net.javacrumbs.completionstage;
 
 import java.util.function.Consumer;
 
+/**
+ * Interface that allows to register callbacks.
+ * @param <T>
+ */
 public interface Listenable<T> {
+    /**
+     * Add callbacks.
+     * @param onSuccess called when processing succeeds
+     * @param onFailure called when processing fails
+     */
     public void addCallbacks(Consumer<? super T> onSuccess, Consumer<Throwable> onFailure);
 }

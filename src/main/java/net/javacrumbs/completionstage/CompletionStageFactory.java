@@ -15,17 +15,40 @@
  */
 package net.javacrumbs.completionstage;
 
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
+/**
+ * Factory for {@link java.util.concurrent.CompletionStage} implementation.
+ */
 public class CompletionStageFactory {
     private final Executor defaultExecutor;
 
+    /**
+     * Creates factory.
+     * @param defaultExecutor executor to be used for async methods without executor parameter
+     */
     public CompletionStageFactory(Executor defaultExecutor) {
         this.defaultExecutor = defaultExecutor;
     }
 
-    public <T> CompletionStage<T> createCompletableFuture(Listenable<T> listenable) {
+    /**
+     * Creates completion stage. Caller has to provide a {@link net.javacrumbs.completionstage.Listenable} and
+     * the CompletionStage will add itself as a callback. For example:
+     *
+     * <pre>
+     * {@code
+     * factory.createCompletionStage((onSuccess, onFailure) -> onSuccess.accept(result));
+     * }
+     * </pre>
+     *
+     * @param listenable created completion stage will register itself in this listenable
+     * @param <T> type of the CompletionStage
+     * @return CompletionStage
+     */
+    public <T> CompletionStage<T> createCompletionStage(Listenable<T> listenable) {
+        Objects.requireNonNull(listenable, "'listenable' can not be null");
         SimpleCompletionStage<T> newSimpleCompletionStage = new SimpleCompletionStage<>(defaultExecutor);
         listenable.addCallbacks(newSimpleCompletionStage::complete, newSimpleCompletionStage::completeExceptionally);
         return newSimpleCompletionStage;

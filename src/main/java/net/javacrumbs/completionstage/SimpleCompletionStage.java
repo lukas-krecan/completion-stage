@@ -148,7 +148,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action, Executor executor) {
         return thenCombineAsync(
                 other,
-                // transform BiFunction to BiConsumer
+                // transform BiConsumer to BiFunction
                 (t, u) -> {
                     action.accept(t, u);
                     return null;
