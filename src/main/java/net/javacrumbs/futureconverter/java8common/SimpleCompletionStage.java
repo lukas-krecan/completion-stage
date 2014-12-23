@@ -233,7 +233,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn) {
-        return null;
+        return thenComposeAsync(fn, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -243,7 +243,19 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor) {
-        return null;
+        SimpleCompletionStage<U> newCompletionStage = newSimpleCompletionStage();
+        callbackRegistry.addCallbacks(
+                result -> {
+                    try {
+                        fn.apply(result).thenAccept(newCompletionStage::success);
+                    } catch (Throwable e) {
+                        handleFailure(newCompletionStage, e);
+                    }
+                },
+                e -> handleFailure(newCompletionStage, e),
+                executor
+        );
+        return newCompletionStage;
     }
 
     @Override

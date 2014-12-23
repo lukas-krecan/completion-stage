@@ -33,7 +33,9 @@ import static org.mockito.Mockito.when;
  * followingStagesShouldBeCalledInTeSameThread - can be executed in the main thread
  * Duplicity
  * Transformation to function
+ * then compose
  */
+@SuppressWarnings("unchecked")
 public abstract class AbstractCompletionStageTest {
     protected static final String VALUE = "test";
     protected static final String VALUE2 = "value2";
@@ -445,6 +447,33 @@ public abstract class AbstractCompletionStageTest {
         finishCalculation(completionStage);
 
         verify(runnable).run();
+    }
+
+    @Test
+    public void thenComposeWaitsForTheOtherResult() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+
+        Consumer<String> consumer = mock(Consumer.class);
+        completionStage.thenCompose(r -> completionStage2).thenAccept(consumer);
+
+        finishCalculation(completionStage);
+        finishCalculation(completionStage2);
+
+        verify(consumer, times(1)).accept(VALUE2);
+    }
+
+    @Test
+    public void thenComposeWrapsExceptionIfFunctionFails() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
+        completionStage.thenCompose(r -> {throw EXCEPTION;}).handle(handler);
+
+        finishCalculation(completionStage);
+
+        verify(handler, times(1)).apply(isNull(String.class), isA(CompletionException.class));
     }
 
     /**
