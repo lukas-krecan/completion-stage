@@ -191,6 +191,21 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void ifExceptionallyFunctionFailsItShouldBePassedFurther() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        Consumer<String> consumer = mock(Consumer.class);
+        Function<Throwable, String> errorHandler = mock(Function.class);
+        when(errorHandler.apply(EXCEPTION)).thenReturn(VALUE);
+        completionStage.exceptionally(e -> {throw EXCEPTION;}).exceptionally(errorHandler).thenAccept(consumer);
+
+        finishCalculation(completionStage);
+
+        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(consumer).accept(null);
+    }
+
+    @Test
     public void shouldCombineValues() {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
@@ -315,6 +330,38 @@ public abstract class AbstractCompletionStageTest {
         finishCalculation(completionStage);
 
         verify(consumer).apply(VALUE, null);
+    }
+
+    @Test
+    public void exceptionFromHandleShouldBePropagatedOnSuccess() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        BiFunction<String, Throwable, Integer> consumer = (s, throwable) -> {
+            throw EXCEPTION;
+        };
+
+        Function<Throwable, Integer> errorHandler = mock(Function.class);
+        completionStage.handle(consumer).exceptionally(errorHandler);
+
+        finishCalculation(completionStage);
+
+        verify(errorHandler).apply(isA(CompletionException.class));
+    }
+
+    @Test
+    public void exceptionFromHandleShouldBePropagatedOnError() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        BiFunction<String, Throwable, Integer> consumer = (s, throwable) -> {
+            throw EXCEPTION;
+        };
+
+        Function<Throwable, Integer> errorHandler = mock(Function.class);
+        completionStage.handle(consumer).exceptionally(errorHandler);
+
+        finishCalculation(completionStage);
+
+        verify(errorHandler).apply(isA(CompletionException.class));
     }
 
     @Test
