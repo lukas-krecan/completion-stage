@@ -11,7 +11,7 @@ public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedComp
     }
 
     @Override
-    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+    protected CompletionStage<String> createCompletionStage(Throwable e) {
         return new DelayedSimpleCompletionStage(c -> c.failure(e));
     }
 

@@ -13,7 +13,7 @@ public class FinishedCompletionStageFactoryTest extends AbstractCompletionStageT
     }
 
     @Override
-    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+    protected CompletionStage<String> createCompletionStage(Throwable e) {
         return factory.createCompletableFuture((onSuccess, onFailure) -> onFailure.accept(e));
     }
 

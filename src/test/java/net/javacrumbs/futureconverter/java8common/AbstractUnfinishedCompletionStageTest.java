@@ -52,7 +52,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
     @Test
     public void acceptEitherPropagatesExceptionFromSecondCompletable() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
-        CompletionStage<String> completionStage2 = createExceptionalCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
         finishCalculation(completionStage2);
 
         Consumer<String> consumer = mock(Consumer.class);
@@ -67,7 +67,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
 
     @Test
     public void acceptEitherPropagatesExceptionFromFirstCompletable() {
-        CompletionStage<String> completionStage = createExceptionalCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finishCalculation(completionStage);
 

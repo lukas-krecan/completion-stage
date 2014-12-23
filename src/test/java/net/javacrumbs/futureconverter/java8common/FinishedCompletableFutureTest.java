@@ -17,7 +17,7 @@ public class FinishedCompletableFutureTest extends AbstractCompletionStageTest {
     }
 
     @Override
-    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+    protected CompletionStage<String> createCompletionStage(Throwable e) {
         CompletableFuture<String> completableFuture = new CompletableFuture<>();
         completableFuture.completeExceptionally(e);
         return completableFuture;

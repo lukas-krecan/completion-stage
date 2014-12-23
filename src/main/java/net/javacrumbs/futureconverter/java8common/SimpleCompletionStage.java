@@ -54,7 +54,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         callbackRegistry.addCallbacks(
                 result -> {
                     try {
-                        newCompletionStage.success(fn.apply(result));
+                        transformResultAndSendItToNextStage(fn, newCompletionStage, result);
                     } catch (Throwable e) {
                         newCompletionStage.failure(wrapException(e));
                     }
@@ -183,11 +183,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         callbackRegistry.addCallbacks(
                 result -> {
                     if (processed.compareAndSet(false, true)) {
-                        try {
-                            newCompletionStage.success(fn.apply(result));
-                        } catch (Throwable e) {
-                            newCompletionStage.failure(wrapException(e));
-                        }
+                        transformResultAndSendItToNextStage(fn, newCompletionStage, result);
                     }
                 },
                 e -> {
@@ -200,11 +196,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         other.whenCompleteAsync((result, failure) -> {
             if (processed.compareAndSet(false, true)) {
                 if (failure == null) {
-                    try {
-                        newCompletionStage.success(fn.apply(result));
-                    } catch (Throwable e) {
-                        newCompletionStage.failure(wrapException(e));
-                    }
+                    transformResultAndSendItToNextStage(fn, newCompletionStage, result);
                 } else {
                     newCompletionStage.failure(wrapException(failure));
                 }
@@ -241,7 +233,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     @Override
     @SuppressWarnings("unchecked") //nasty
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return applyToEitherAsync((CompletionStage<T>)other, convertRunnableToFunction(action), executor);
+        return applyToEitherAsync((CompletionStage<T>) other, convertRunnableToFunction(action), executor);
     }
 
     @Override
@@ -264,6 +256,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         SimpleCompletionStage<T> newCompletionStage = newSimpleCompletionStage();
         callbackRegistry.addCallbacks(
                 newCompletionStage::success,
+                //TODO: exception handling
                 t -> newCompletionStage.success(fn.apply(t)),
                 SAME_THREAD_EXECUTOR
         );
@@ -285,12 +278,20 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         SimpleCompletionStage<T> newCompletionStage = newSimpleCompletionStage();
         callbackRegistry.addCallbacks(
                 result -> {
-                    action.accept(result, null);
-                    newCompletionStage.success(result);
+                    try {
+                        action.accept(result, null);
+                        newCompletionStage.success(result);
+                    } catch (Throwable e) {
+                        newCompletionStage.failure(wrapException(e));
+                    }
                 },
-                e -> {
-                    action.accept(null, e);
-                    newCompletionStage.failure(wrapException(e));
+                failure -> {
+                    try {
+                        action.accept(null, failure);
+                        newCompletionStage.failure(wrapException(failure));
+                    } catch (Throwable e) {
+                        newCompletionStage.failure(wrapException(e));
+                    }
                 }, executor
         );
         return newCompletionStage;
@@ -298,7 +299,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> handle(BiFunction<? super T, Throwable, ? extends U> fn) {
-        return null;
+        return handleAsync(fn, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -308,7 +309,18 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
-        return null;
+        SimpleCompletionStage<U> newCompletionStage = newSimpleCompletionStage();
+        callbackRegistry.addCallbacks(
+                result -> {
+                    //TODO: exception handling
+                    newCompletionStage.success(fn.apply(result, null));
+                },
+                e -> {
+                    //TODO: exception handling
+                    newCompletionStage.success(fn.apply(null, e));
+                }, executor
+        );
+        return newCompletionStage;
     }
 
     @Override
@@ -346,4 +358,13 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
             return null;
         };
     }
+
+    private <U> void transformResultAndSendItToNextStage(Function<? super T, ? extends U> fn, SimpleCompletionStage<U> newCompletionStage, T result) {
+        try {
+            newCompletionStage.success(fn.apply(result));
+        } catch (Throwable e) {
+            newCompletionStage.failure(wrapException(e));
+        }
+    }
+
 }

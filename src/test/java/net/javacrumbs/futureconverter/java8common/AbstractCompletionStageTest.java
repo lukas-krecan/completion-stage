@@ -42,7 +42,7 @@ public abstract class AbstractCompletionStageTest {
 
     protected abstract CompletionStage<String> createCompletionStage(String value);
 
-    protected abstract CompletionStage<String> createExceptionalCompletionStage(Throwable e);
+    protected abstract CompletionStage<String> createCompletionStage(Throwable e);
 
     protected abstract void finishCalculation(CompletionStage<String> c);
 
@@ -146,7 +146,7 @@ public abstract class AbstractCompletionStageTest {
 
     @Test
     public void exceptionallyShouldTranslateExceptionToAValue() {
-        CompletionStage<String> completionStage = createExceptionalCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
         Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, String> function = mock(Function.class);
@@ -293,7 +293,7 @@ public abstract class AbstractCompletionStageTest {
 
     @Test
     public void shouldNotFailOnException() {
-        CompletionStage<String> completionStage = createExceptionalCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
         Consumer<Integer> consumer = mock(Consumer.class);
         Function<Throwable, Void> errorFunction = mock(Function.class);
@@ -304,6 +304,33 @@ public abstract class AbstractCompletionStageTest {
         verifyZeroInteractions(consumer);
         verify(errorFunction, times(1)).apply(isA(CompletionException.class));
     }
+
+    @Test
+    public void handleShouldBeCalled() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        BiFunction<String, Throwable, Integer> consumer = mock(BiFunction.class);
+        completionStage.handle(consumer);
+
+        finishCalculation(completionStage);
+
+        verify(consumer).apply(VALUE, null);
+    }
+
+    @Test
+    public void handleShouldNotPassException() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        BiFunction<String, Throwable, Integer> consumer = mock(BiFunction.class);
+        Function<Throwable, Integer> errorHandler = mock(Function.class);
+        completionStage.handle(consumer).exceptionally(errorHandler);
+
+        finishCalculation(completionStage);
+
+        verify(consumer).apply(null, EXCEPTION);
+        verifyZeroInteractions(errorHandler);
+    }
+
 
     @Test
     public void whenCompleteShouldAcceptValue() {
@@ -318,15 +345,47 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
-    public void whenCompleteShouldAcceptException() {
-        CompletionStage<String> completionStage = createExceptionalCompletionStage(EXCEPTION);
+    public void whenCompleteShouldPassException() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
         BiConsumer<Integer, Throwable> consumer = mock(BiConsumer.class);
-        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer);
+        Function<Throwable, Integer> errorHandler = mock(Function.class);
+        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer).exceptionally(errorHandler);
 
         finishCalculation(completionStage);
 
         verify(consumer).accept((Integer) isNull(), isA(CompletionException.class));
+        verify(errorHandler).apply(isA(CompletionException.class));
+    }
+
+    @Test
+    public void whenCompleteShouldPassExceptionFromConsumerOnSuccess() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        BiConsumer<String, Throwable> consumer = (r, e) -> {
+            throw EXCEPTION;
+        };
+        Function<Throwable, String> errorHandler = mock(Function.class);
+        completionStage.whenComplete(consumer).exceptionally(errorHandler);
+
+        finishCalculation(completionStage);
+
+        verify(errorHandler).apply(isA(CompletionException.class));
+    }
+
+    @Test
+    public void whenCompleteShouldPassExceptionFromConsumerOnFailure() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        BiConsumer<String, Throwable> consumer = (r, e) -> {
+            throw EXCEPTION;
+        };
+        Function<Throwable, String> errorHandler = mock(Function.class);
+        completionStage.whenComplete(consumer).exceptionally(errorHandler);
+
+        finishCalculation(completionStage);
+
+        verify(errorHandler).apply(isA(CompletionException.class));
     }
 
     @Test

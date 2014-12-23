@@ -16,7 +16,7 @@ public class UnfinishedCompletableFutureTest extends AbstractUnfinishedCompletio
     }
 
     @Override
-    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+    protected CompletionStage<String> createCompletionStage(Throwable e) {
         return new DelayedCompletableFuture<>(c -> c.completeExceptionally(e));
     }
 
