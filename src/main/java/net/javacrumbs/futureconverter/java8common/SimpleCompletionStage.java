@@ -19,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -180,7 +181,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public CompletionStage<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action) {
-        return null;
+        return acceptEitherAsync(other, action, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -190,7 +191,41 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor) {
-        return null;
+        SimpleCompletionStage<Void> newCompletionStage = newSimpleCompletionStage();
+        AtomicBoolean processed = new AtomicBoolean(false);
+        callbackRegistry.addCallbacks(
+                result -> {
+                    if (processed.compareAndSet(false, true)) {
+                        try {
+                            action.accept(result);
+                            newCompletionStage.success(null);
+                        } catch (Throwable e) {
+                            newCompletionStage.failure(wrapException(e));
+                        }
+                    }
+                },
+                e -> {
+                    if (processed.compareAndSet(false, true)) {
+                        newCompletionStage.failure(wrapException(e));
+                    }
+                },
+                executor
+        );
+        other.whenCompleteAsync((result, failure) -> {
+            if (processed.compareAndSet(false, true)) {
+                if (failure == null) {
+                    try {
+                        action.accept(result);
+                        newCompletionStage.success(null);
+                    } catch (Throwable e) {
+                        newCompletionStage.failure(wrapException(e));
+                    }
+                } else {
+                    newCompletionStage.failure(wrapException(failure));
+                }
+            }
+        }, executor);
+        return newCompletionStage;
     }
 
     @Override
@@ -281,7 +316,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     }
 
     private Consumer<Throwable> standardFailureCallback(SimpleCompletionStage<?> newCompletionStage) {
-        return t -> newCompletionStage.failure(wrapException(t));
+        return e -> newCompletionStage.failure(wrapException(e));
     }
 
     private final Throwable wrapException(Throwable e) {

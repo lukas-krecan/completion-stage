@@ -5,34 +5,20 @@ import java.util.concurrent.CompletionStage;
 public class FinishedCompletionStageFactoryTest extends AbstractCompletionStageTest {
     private final CompletionStageFactory factory = new CompletionStageFactory();
 
-    protected CompletionStage<String> createCompletionStage() {
+    @Override
+    protected CompletionStage<String> createCompletionStage(String value) {
         return factory.createCompletableFuture((onSuccess, onFailure) -> {
-            onSuccess.accept(VALUE);
+            onSuccess.accept(value);
         });
     }
 
     @Override
-    protected CompletionStage<String> createOtherCompletionStage() {
-        return factory.createCompletableFuture((onSuccess, onFailure) -> {
-            onSuccess.accept(VALUE2);
-        });
-    }
-
-    protected CompletionStage<String> createExceptionalCompletionStage() {
-        return factory.createCompletableFuture((onSuccess, onFailure) -> {
-            onFailure.accept(EXCEPTION);
-        });
+    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+        return factory.createCompletableFuture((onSuccess, onFailure) -> onFailure.accept(e));
     }
 
     @Override
-    protected void finishCalculation() {
+    protected void finishCalculation(CompletionStage<String> completionStage) {
 
     }
-
-    @Override
-    protected void finishCalculationExceptionally() {
-
-    }
-
-
 }

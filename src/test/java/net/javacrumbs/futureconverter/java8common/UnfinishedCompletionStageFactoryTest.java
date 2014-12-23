@@ -1,35 +1,34 @@
 package net.javacrumbs.futureconverter.java8common;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 
-public class UnfinishedCompletionStageFactoryTest extends AbstractCompletionStageTest {
-    private final CompletionStageFactory factory = new CompletionStageFactory();
-    private final DefaultListenable<String> defaultListenable = new DefaultListenable<>();
+public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedCompletionStageTest {
 
-    protected CompletionStage<String> createCompletionStage() {
-        return factory.createCompletableFuture(defaultListenable);
+    @Override
+    protected CompletionStage<String> createCompletionStage(String value) {
+        return new DelayedSimpleCompletionStage(c -> c.success(value));
     }
 
     @Override
-    protected CompletionStage<String> createOtherCompletionStage() {
-        return factory.createCompletableFuture((onSuccess, onFailure) -> {
-            onSuccess.accept(VALUE2);
-        });
-    }
-
-    protected CompletionStage<String> createExceptionalCompletionStage() {
-        return createCompletionStage();
+    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+        return new DelayedSimpleCompletionStage(c -> c.failure(e));
     }
 
     @Override
-    protected void finishCalculation() {
-        defaultListenable.success(VALUE);
+    protected void finishCalculation(CompletionStage<String> completionStage) {
+        ((DelayedSimpleCompletionStage)completionStage).executeDelayedAction();
     }
 
-    @Override
-    protected void finishCalculationExceptionally() {
-        defaultListenable.failure(EXCEPTION);
+    private final class DelayedSimpleCompletionStage extends SimpleCompletionStage<String> {
+        private final Consumer<DelayedSimpleCompletionStage> delayedAction;
+
+        private DelayedSimpleCompletionStage(Consumer<DelayedSimpleCompletionStage> delayedAction) {
+            this.delayedAction = delayedAction;
+        }
+
+        private void executeDelayedAction() {
+            delayedAction.accept(this);
+        }
     }
-
-
 }

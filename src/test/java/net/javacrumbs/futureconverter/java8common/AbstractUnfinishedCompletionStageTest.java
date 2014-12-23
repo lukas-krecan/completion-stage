@@ -1,0 +1,78 @@
+/**
+ * Copyright 2009-2014 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package net.javacrumbs.futureconverter.java8common;
+
+import org.junit.Test;
+
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+
+public abstract class AbstractUnfinishedCompletionStageTest extends AbstractCompletionStageTest {
+    @Test
+    public void acceptEitherTakesOtherValueIfTheFirstIsNotReady() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage2);
+
+        Consumer<String> consumer = mock(Consumer.class);
+        completionStage.acceptEither(completionStage2, consumer);
+
+        verify(consumer, times(1)).accept(VALUE2);
+        finishCalculation(completionStage);
+
+        verify(consumer, times(1)).accept(any(String.class));
+    }
+
+    @Test
+    public void acceptEitherPropagatesExceptionFromSecondCompletable() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createExceptionalCompletionStage(EXCEPTION);
+        finishCalculation(completionStage2);
+
+        Consumer<String> consumer = mock(Consumer.class);
+        Function<Throwable, Void> errorHandler = mock(Function.class);
+        completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
+
+        verify(errorHandler, times(1)).apply(any(CompletionException.class));
+        finishCalculation(completionStage);
+
+        verifyZeroInteractions(consumer);
+    }
+
+    @Test
+    public void acceptEitherPropagatesExceptionFromFirstCompletable() {
+        CompletionStage<String> completionStage = createExceptionalCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage);
+
+        Consumer<String> consumer = mock(Consumer.class);
+        Function<Throwable, Void> errorHandler = mock(Function.class);
+        completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
+
+        verify(errorHandler, times(1)).apply(any(CompletionException.class));
+        finishCalculation(completionStage2);
+
+        verifyZeroInteractions(consumer);
+    }
+}

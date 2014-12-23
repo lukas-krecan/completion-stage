@@ -2,37 +2,39 @@ package net.javacrumbs.futureconverter.java8common;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 
 /**
  * Tests CompletableFuture. Just to be sure I am reading the spec correctly. Same tests are executed on
  * CompletionStage and CompletableFuture.
  */
-public class UnfinishedCompletableFutureTest extends AbstractCompletionStageTest {
-    private final CompletionStageFactory factory = new CompletionStageFactory();
-    private final CompletableFuture<String> completableFuture = new CompletableFuture<>();
+public class UnfinishedCompletableFutureTest extends AbstractUnfinishedCompletionStageTest {
 
-    protected CompletionStage<String> createCompletionStage() {
-        return completableFuture;
+    @Override
+    protected CompletionStage<String> createCompletionStage(String value) {
+        return new DelayedCompletableFuture<>(c -> c.complete(value));
     }
 
     @Override
-    protected CompletionStage<String> createOtherCompletionStage() {
-        CompletableFuture<String> completableFuture = new CompletableFuture<>();
-        completableFuture.complete(VALUE2);
-        return completableFuture;
+    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
+        return new DelayedCompletableFuture<>(c -> c.completeExceptionally(e));
     }
 
-    protected CompletionStage<String> createExceptionalCompletionStage() {
-        return createCompletionStage();
-    }
 
     @Override
-    protected void finishCalculation() {
-        completableFuture.complete(VALUE);
+    protected void finishCalculation(CompletionStage c) {
+        ((DelayedCompletableFuture) c).executeDelayedAction();
     }
 
-    @Override
-    protected void finishCalculationExceptionally() {
-        completableFuture.completeExceptionally(EXCEPTION);
+    private class DelayedCompletableFuture<T> extends CompletableFuture<T> {
+        private final Consumer<CompletableFuture<T>> delayedAction;
+
+        private DelayedCompletableFuture(Consumer<CompletableFuture<T>> delayedAction) {
+            this.delayedAction = delayedAction;
+        }
+
+        private void executeDelayedAction() {
+            delayedAction.accept(this);
+        }
     }
 }

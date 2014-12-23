@@ -1,6 +1,5 @@
 package net.javacrumbs.futureconverter.java8common;
 
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -10,32 +9,22 @@ import java.util.concurrent.CompletionStage;
  */
 public class FinishedCompletableFutureTest extends AbstractCompletionStageTest {
 
-    protected CompletionStage<String> createCompletionStage() {
+    @Override
+    protected CompletionStage<String> createCompletionStage(String value) {
         CompletableFuture<String> completableFuture = new CompletableFuture<>();
-        completableFuture.complete(VALUE);
+        completableFuture.complete(value);
         return completableFuture;
     }
 
     @Override
-    protected CompletionStage<String> createOtherCompletionStage() {
+    protected CompletionStage<String> createExceptionalCompletionStage(Throwable e) {
         CompletableFuture<String> completableFuture = new CompletableFuture<>();
-        completableFuture.complete(VALUE2);
-        return completableFuture;
-    }
-
-    protected CompletionStage<String> createExceptionalCompletionStage() {
-        CompletableFuture<String> completableFuture = new CompletableFuture<>();
-        completableFuture.completeExceptionally(EXCEPTION);
+        completableFuture.completeExceptionally(e);
         return completableFuture;
     }
 
     @Override
-    protected void finishCalculation() {
-
-    }
-
-    @Override
-    protected void finishCalculationExceptionally() {
+    protected void finishCalculation(CompletionStage<String> completionStage) {
 
     }
 }
