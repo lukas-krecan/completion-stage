@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.javacrumbs.futureconverter.java8common;
+package net.javacrumbs.completionstage;
 
 import java.util.function.Consumer;
 

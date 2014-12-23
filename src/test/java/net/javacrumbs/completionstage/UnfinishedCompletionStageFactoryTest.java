@@ -1,4 +1,4 @@
-package net.javacrumbs.futureconverter.java8common;
+package net.javacrumbs.completionstage;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
