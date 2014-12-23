@@ -1,18 +1,19 @@
 package net.javacrumbs.futureconverter.java8common;
 
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedCompletionStageTest {
 
     @Override
     protected CompletionStage<String> createCompletionStage(String value) {
-        return new DelayedSimpleCompletionStage(c -> c.success(value));
+        return new DelayedSimpleCompletionStage(c -> c.complete(value), defaultExecutor);
     }
 
     @Override
     protected CompletionStage<String> createCompletionStage(Throwable e) {
-        return new DelayedSimpleCompletionStage(c -> c.failure(e));
+        return new DelayedSimpleCompletionStage(c -> c.completeExceptionally(e), defaultExecutor);
     }
 
     @Override
@@ -20,10 +21,11 @@ public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedComp
         ((DelayedSimpleCompletionStage)completionStage).executeDelayedAction();
     }
 
-    private final class DelayedSimpleCompletionStage extends SimpleCompletionStage<String> {
+    private static class DelayedSimpleCompletionStage extends SimpleCompletionStage<String> {
         private final Consumer<DelayedSimpleCompletionStage> delayedAction;
 
-        private DelayedSimpleCompletionStage(Consumer<DelayedSimpleCompletionStage> delayedAction) {
+        private DelayedSimpleCompletionStage(Consumer<DelayedSimpleCompletionStage> delayedAction, Executor defaultExecutor) {
+            super(defaultExecutor);
             this.delayedAction = delayedAction;
         }
 

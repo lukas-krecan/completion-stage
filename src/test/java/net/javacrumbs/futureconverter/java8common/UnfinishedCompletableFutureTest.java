@@ -26,7 +26,7 @@ public class UnfinishedCompletableFutureTest extends AbstractUnfinishedCompletio
         ((DelayedCompletableFuture) c).executeDelayedAction();
     }
 
-    private class DelayedCompletableFuture<T> extends CompletableFuture<T> {
+    private static class DelayedCompletableFuture<T> extends CompletableFuture<T> {
         private final Consumer<CompletableFuture<T>> delayedAction;
 
         private DelayedCompletableFuture(Consumer<CompletableFuture<T>> delayedAction) {

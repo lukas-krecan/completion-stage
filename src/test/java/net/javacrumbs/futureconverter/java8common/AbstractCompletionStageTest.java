@@ -3,10 +3,12 @@ package net.javacrumbs.futureconverter.java8common;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -16,6 +18,7 @@ import java.util.function.Function;
 import static java.lang.Thread.currentThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.isNull;
@@ -40,7 +43,9 @@ public abstract class AbstractCompletionStageTest {
     protected static final String VALUE = "test";
     protected static final String VALUE2 = "value2";
     protected static final RuntimeException EXCEPTION = new RuntimeException("Test");
-    public static final String IN_EXECUTOR_THREAD_NAME = "in executor";
+    protected static final String IN_EXECUTOR_THREAD_NAME = "in executor";
+    protected static final String IN_DEFAULT_EXECUTOR_THREAD_NAME = "in default executor";
+    private static final String MAIN = "main";
 
     protected abstract CompletionStage<String> createCompletionStage(String value);
 
@@ -49,6 +54,8 @@ public abstract class AbstractCompletionStageTest {
     protected abstract void finish(CompletionStage<String> c);
 
     private final List<Throwable> failures = new CopyOnWriteArrayList<>();
+
+    protected Executor defaultExecutor = new ThreadNamingExecutor(IN_DEFAULT_EXECUTOR_THREAD_NAME);
 
     protected boolean finished() {
         return true;
@@ -99,7 +106,7 @@ public abstract class AbstractCompletionStageTest {
 
         CountDownLatch waitLatch = new CountDownLatch(1);
 
-        Executor executor = new ThreadNamingExecutor();
+        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
         completionStage.thenAcceptAsync(r -> {
             assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
             waitLatch.countDown();
@@ -117,7 +124,7 @@ public abstract class AbstractCompletionStageTest {
 
         CountDownLatch waitLatch = new CountDownLatch(1);
 
-        Executor executor = new ThreadNamingExecutor();
+        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
         completionStage
                 .thenApplyAsync(r -> {
                     assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
@@ -127,6 +134,31 @@ public abstract class AbstractCompletionStageTest {
                     // In fact it can be executed even in main thread depending if the previous callback finished sooner than
                     // thenAccept is called
                     // assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
+                    assertEquals("a", r);
+                    waitLatch.countDown();
+                })
+                .exceptionally(errorHandler(waitLatch));
+
+        finish(completionStage);
+
+        waitLatch.await();
+        assertThat(failures).isEmpty();
+    }
+
+    @Test
+    public void allAsyncCallShouldBeCalledInDefaultExecutor() throws InterruptedException {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        CountDownLatch waitLatch = new CountDownLatch(1);
+        currentThread().setName(MAIN);
+
+        completionStage
+                .thenApplyAsync(r -> {
+                    assertNotEquals(MAIN, currentThread().getName());
+                    return "a";
+                })
+                .thenAcceptAsync(r -> {
+                    assertNotEquals(MAIN, currentThread().getName());
                     assertEquals("a", r);
                     waitLatch.countDown();
                 })
@@ -199,7 +231,9 @@ public abstract class AbstractCompletionStageTest {
         Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, String> errorHandler = mock(Function.class);
         when(errorHandler.apply(EXCEPTION)).thenReturn(VALUE);
-        completionStage.exceptionally(e -> {throw EXCEPTION;}).exceptionally(errorHandler).thenAccept(consumer);
+        completionStage.exceptionally(e -> {
+            throw EXCEPTION;
+        }).exceptionally(errorHandler).thenAccept(consumer);
 
         finish(completionStage);
 
@@ -465,11 +499,39 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void toCompletableFutureShouldPassValue() throws ExecutionException, InterruptedException {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        CompletableFuture<String> completableFuture = completionStage.toCompletableFuture();
+
+        finish(completionStage);
+
+        assertThat(completableFuture.get()).isEqualTo(VALUE);
+    }
+
+    @Test
+    public void toCompletableFutureShouldPassException() throws ExecutionException, InterruptedException {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        CompletableFuture<String> completableFuture = completionStage.toCompletableFuture();
+
+        finish(completionStage);
+
+        try {
+            completableFuture.get();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause()).isSameAs(EXCEPTION);
+        }
+    }
+
+    @Test
     public void thenComposeWrapsExceptionIfFunctionFails() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
         BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
-        completionStage.thenCompose(r -> {throw EXCEPTION;}).handle(handler);
+        completionStage.thenCompose(r -> {
+            throw EXCEPTION;
+        }).handle(handler);
 
         finish(completionStage);
 
@@ -479,11 +541,17 @@ public abstract class AbstractCompletionStageTest {
     /**
      * Names thread
      */
-    private class ThreadNamingExecutor implements Executor {
+    protected static class ThreadNamingExecutor implements Executor {
+        private final String threadName;
+
+        protected ThreadNamingExecutor(String threadName) {
+            this.threadName = threadName;
+        }
+
         @Override
         public void execute(Runnable command) {
             Thread thread = new Thread(command);
-            thread.setName(IN_EXECUTOR_THREAD_NAME);
+            thread.setName(threadName);
             thread.start();
         }
     }
