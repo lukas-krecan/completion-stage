@@ -307,14 +307,14 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor) {
         SimpleCompletionStage<T> newCompletionStage = newSimpleCompletionStage();
         callbackRegistry.addCallbacks(
-                result -> {
-                    try {
-                        action.accept(result, null);
-                        newCompletionStage.complete(result);
-                    } catch (Throwable e) {
-                        handleFailure(newCompletionStage, e);
-                    }
-                },
+                result -> transformResultAndSendItToNextStage(
+                        r -> {
+                            action.accept(r, null);
+                            return null;
+                        },
+                        newCompletionStage,
+                        result
+                ),
                 failure -> {
                     try {
                         action.accept(null, failure);
@@ -360,17 +360,6 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         return completableFuture;
     }
 
-    private void handleFailure(SimpleCompletionStage<?> newCompletionStage, Throwable e) {
-        newCompletionStage.completeExceptionally(wrapException(e));
-    }
-
-    private Throwable wrapException(Throwable e) {
-        if (e instanceof CompletionException) {
-            return e;
-        } else {
-            return new CompletionException(e);
-        }
-    }
 
     private <R> SimpleCompletionStage<R> newSimpleCompletionStage() {
         return new SimpleCompletionStage<>(defaultExecutor);
@@ -391,12 +380,37 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
         };
     }
 
-    private <U> void transformResultAndSendItToNextStage(Function<? super T, ? extends U> fn, SimpleCompletionStage<U> newCompletionStage, T result) {
+    /**
+     * Transforms the result using fn and sends it to nextStage. Exceptions are handled using handleFailure
+     * @param fn transformation function
+     * @param nextStage stage to send the result to
+     * @param result the result
+     * @param <U> return type
+     */
+    private <U> void transformResultAndSendItToNextStage(Function<? super T, ? extends U> fn, SimpleCompletionStage<U> nextStage, T result) {
         try {
-            newCompletionStage.complete(fn.apply(result));
+            nextStage.complete(fn.apply(result));
         } catch (Throwable e) {
-            handleFailure(newCompletionStage, e);
+            handleFailure(nextStage, e);
         }
     }
+
+    /**
+     * Wraps exception and sends it to next execution stage.
+     * @param nextStage stage to send the exception to
+     * @param e the exception
+     */
+    private void handleFailure(SimpleCompletionStage<?> nextStage, Throwable e) {
+        nextStage.completeExceptionally(wrapException(e));
+    }
+
+    private Throwable wrapException(Throwable e) {
+        if (e instanceof CompletionException) {
+            return e;
+        } else {
+            return new CompletionException(e);
+        }
+    }
+
 
 }
