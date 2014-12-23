@@ -31,6 +31,8 @@ import static org.mockito.Mockito.when;
  * original test followingStagesShouldBeCalledInTeSameThread
  * callback hell
  * followingStagesShouldBeCalledInTeSameThread - can be executed in the main thread
+ * Duplicity
+ * Transformation to function
  */
 public abstract class AbstractCompletionStageTest {
     protected static final String VALUE = "test";
@@ -46,6 +48,10 @@ public abstract class AbstractCompletionStageTest {
 
     private final List<Throwable> failures = new CopyOnWriteArrayList<>();
 
+    protected boolean finished() {
+        return true;
+    }
+
     @Test
     public void acceptEitherAcceptsOnlyOneValue() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
@@ -57,6 +63,20 @@ public abstract class AbstractCompletionStageTest {
         completionStage.acceptEither(completionStage2, consumer);
 
         verify(consumer, times(1)).accept(any(String.class));
+    }
+
+    @Test
+    public void runAfterEitherCalledOnlyOnce() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage);
+
+        Runnable runnable = mock(Runnable.class);
+        completionStage.runAfterEither(completionStage2, runnable);
+
+        finishCalculation(completionStage2);
+
+        verify(runnable, times(1)).run();
     }
 
     @Test
@@ -206,6 +226,42 @@ public abstract class AbstractCompletionStageTest {
         verify(consumer).accept(5);
     }
 
+    @Test
+    public void shouldAcceptBothValues() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage2);
+
+        BiConsumer<String, String> biConsumer = mock(BiConsumer.class);
+
+        completionStage1.thenAcceptBoth(completionStage2, biConsumer);
+        if (!finished()) {
+            verifyZeroInteractions(biConsumer);
+        }
+
+        finishCalculation(completionStage1);
+
+        verify(biConsumer).accept(VALUE, VALUE2);
+    }
+
+    @Test
+    public void shouldRunAfterBothValues() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage2);
+
+        Runnable runnable = mock(Runnable.class);
+
+        completionStage1.runAfterBoth(completionStage2, runnable);
+        if (!finished()) {
+            verifyZeroInteractions(runnable);
+        }
+
+        finishCalculation(completionStage1);
+
+        verify(runnable).run();
+    }
+
 
     @Test
     public void exceptionFromThenAcceptShouldBePassedToTheNextPhase() {
@@ -271,6 +327,18 @@ public abstract class AbstractCompletionStageTest {
         finishCalculation(completionStage);
 
         verify(consumer).accept((Integer) isNull(), isA(CompletionException.class));
+    }
+
+    @Test
+    public void thenRunShouldRun() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+
+        Runnable runnable = mock(Runnable.class);
+        completionStage.thenRun(runnable);
+
+        finishCalculation(completionStage);
+
+        verify(runnable).run();
     }
 
     /**

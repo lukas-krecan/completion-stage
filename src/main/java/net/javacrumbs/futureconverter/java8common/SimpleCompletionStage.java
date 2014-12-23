@@ -76,26 +76,13 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor) {
-        SimpleCompletionStage<Void> newCompletionStage = newSimpleCompletionStage();
-        callbackRegistry.addCallbacks(
-                result -> {
-                    try {
-                        action.accept(result);
-                        newCompletionStage.success(null);
-                    } catch (Throwable e) {
-                        newCompletionStage.failure(wrapException(e));
-                    }
-                },
-                standardFailureCallback(newCompletionStage),
-                executor
-        );
-        return newCompletionStage;
+        return thenApplyAsync(convertConsumerToFunction(action), executor);
     }
 
 
     @Override
     public CompletionStage<Void> thenRun(Runnable action) {
-        return null;
+        return thenRunAsync(action, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -105,7 +92,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public CompletionStage<Void> thenRunAsync(Runnable action, Executor executor) {
-        return null;
+        return thenApplyAsync(convertRunnableToFunction(action), executor);
     }
 
     @Override
@@ -128,7 +115,8 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
                     } catch (Throwable e) {
                         newCompletionStage.failure(wrapException(e));
                     }
-                }, standardFailureCallback(newCompletionStage),
+                },
+                standardFailureCallback(newCompletionStage),
                 executor
         );
         return newCompletionStage;
@@ -136,7 +124,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBoth(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action) {
-        return null;
+        return thenAcceptBothAsync(other, action, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -146,12 +134,19 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action, Executor executor) {
-        return null;
+        return thenCombineAsync(
+                other,
+                (t, u) -> {
+                    action.accept(t, u);
+                    return null;
+                },
+                executor
+        );
     }
 
     @Override
     public CompletionStage<Void> runAfterBoth(CompletionStage<?> other, Runnable action) {
-        return null;
+        return runAfterBothAsync(other, action, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -161,12 +156,19 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return null;
+        return thenCombineAsync(
+                other,
+                (t, r) -> {
+                    action.run();
+                    return null;
+                },
+                executor
+        );
     }
 
     @Override
     public <U> CompletionStage<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn) {
-        return null;
+        return applyToEitherAsync(other, fn, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -176,29 +178,13 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor) {
-        return null;
-    }
-
-    @Override
-    public CompletionStage<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action) {
-        return acceptEitherAsync(other, action, SAME_THREAD_EXECUTOR);
-    }
-
-    @Override
-    public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action) {
-        return null;
-    }
-
-    @Override
-    public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor) {
-        SimpleCompletionStage<Void> newCompletionStage = newSimpleCompletionStage();
+        SimpleCompletionStage<U> newCompletionStage = newSimpleCompletionStage();
         AtomicBoolean processed = new AtomicBoolean(false);
         callbackRegistry.addCallbacks(
                 result -> {
                     if (processed.compareAndSet(false, true)) {
                         try {
-                            action.accept(result);
-                            newCompletionStage.success(null);
+                            newCompletionStage.success(fn.apply(result));
                         } catch (Throwable e) {
                             newCompletionStage.failure(wrapException(e));
                         }
@@ -215,8 +201,7 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
             if (processed.compareAndSet(false, true)) {
                 if (failure == null) {
                     try {
-                        action.accept(result);
-                        newCompletionStage.success(null);
+                        newCompletionStage.success(fn.apply(result));
                     } catch (Throwable e) {
                         newCompletionStage.failure(wrapException(e));
                     }
@@ -229,8 +214,23 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     }
 
     @Override
-    public CompletionStage<Void> runAfterEither(CompletionStage<?> other, Runnable action) {
+    public CompletionStage<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action) {
+        return acceptEitherAsync(other, action, SAME_THREAD_EXECUTOR);
+    }
+
+    @Override
+    public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action) {
         return null;
+    }
+
+    @Override
+    public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor) {
+        return applyToEitherAsync(other, convertConsumerToFunction(action), executor);
+    }
+
+    @Override
+    public CompletionStage<Void> runAfterEither(CompletionStage<?> other, Runnable action) {
+        return runAfterEitherAsync(other, action, SAME_THREAD_EXECUTOR);
     }
 
     @Override
@@ -239,8 +239,9 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked") //nasty
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return null;
+        return applyToEitherAsync((CompletionStage<T>)other, convertRunnableToFunction(action), executor);
     }
 
     @Override
@@ -329,5 +330,20 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
 
     private <R> SimpleCompletionStage<R> newSimpleCompletionStage() {
         return new SimpleCompletionStage<>();
+    }
+
+
+    private Function<T, Void> convertConsumerToFunction(Consumer<? super T> action) {
+        return result -> {
+            action.accept(result);
+            return null;
+        };
+    }
+
+    private Function<T, Void> convertRunnableToFunction(Runnable action) {
+        return result -> {
+            action.run();
+            return null;
+        };
     }
 }

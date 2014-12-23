@@ -29,6 +29,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 public abstract class AbstractUnfinishedCompletionStageTest extends AbstractCompletionStageTest {
+
+    protected boolean finished() {
+        return false;
+    }
+
     @Test
     public void acceptEitherTakesOtherValueIfTheFirstIsNotReady() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
@@ -74,5 +79,39 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         finishCalculation(completionStage2);
 
         verifyZeroInteractions(consumer);
+    }
+
+    @Test
+    public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingFirsStage() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage);
+
+        Consumer<String> consumer = s -> {
+            throw EXCEPTION;
+        };
+
+        Function<Throwable, Void> errorHandler = mock(Function.class);
+        completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
+
+        verify(errorHandler, times(1)).apply(any(CompletionException.class));
+        finishCalculation(completionStage2);
+    }
+
+    @Test
+    public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingSecondStage() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finishCalculation(completionStage2);
+
+        Consumer<String> consumer = s -> {
+            throw EXCEPTION;
+        };
+
+        Function<Throwable, Void> errorHandler = mock(Function.class);
+        completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
+
+        verify(errorHandler, times(1)).apply(any(CompletionException.class));
+        finishCalculation(completionStage);
     }
 }
