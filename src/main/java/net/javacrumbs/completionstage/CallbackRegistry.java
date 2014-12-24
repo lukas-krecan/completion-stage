@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  * <p>Inspired by {@code org.springframework.util.concurrent.ListenableFutureCallbackRegistry}
  *
  */
-class ListenableCallbackRegistry<T> {
+class CallbackRegistry<T> {
 
 	private final Queue<CallbackExecutorPair<? super T>> successCallbacks = new LinkedList<>();
 	private final Queue<CallbackExecutorPair<Throwable>> failureCallbacks = new LinkedList<>();
@@ -74,8 +74,13 @@ class ListenableCallbackRegistry<T> {
 		}
 	}
 
-	public void success(T result) {
+	public boolean success(T result) {
 		synchronized (mutex) {
+			if (state != State.NEW) {
+				// already completed
+				return false;
+			}
+
 			state = State.SUCCESS;
 			this.result = result;
 
@@ -83,11 +88,17 @@ class ListenableCallbackRegistry<T> {
 				callCallback(successCallbacks.poll(), result);
 			}
             failureCallbacks.clear();
+			return true;
 		}
 	}
 
-	public void failure(Throwable t) {
+	public boolean failure(Throwable t) {
 		synchronized (mutex) {
+			if (state != State.NEW) {
+				// already completed
+				return false;
+			}
+
 			state = State.FAILURE;
 			this.failure = t;
 
@@ -95,6 +106,7 @@ class ListenableCallbackRegistry<T> {
 				callCallback(failureCallbacks.poll(), failure);
 			}
             successCallbacks.clear();
+			return true;
 		}
 	}
 

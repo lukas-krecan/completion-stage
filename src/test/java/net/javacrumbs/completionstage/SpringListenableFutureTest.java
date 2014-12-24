@@ -21,8 +21,6 @@ import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
-import java.util.concurrent.CompletionStage;
-
 public class SpringListenableFutureTest {
     private final AsyncListenableTaskExecutor executor = new TaskExecutorAdapter(Runnable::run);
     private final CompletionStageFactory factory = new CompletionStageFactory(Runnable::run);
@@ -31,18 +29,17 @@ public class SpringListenableFutureTest {
     public void testTransformationFromSpring() {
         ListenableFuture<String> springListenableFuture = createSpringListenableFuture();
 
-        CompletionStage<Object> completionStage = factory.createCompletionStage((myOnSuccess, myOnFailure) -> {
-            springListenableFuture.addCallback(new ListenableFutureCallback<String>() {
-                @Override
-                public void onSuccess(String result) {
-                    myOnSuccess.accept(result);
-                }
+        CompletableCompletionStage<Object> completionStage = factory.createCompletionStage();
+        springListenableFuture.addCallback(new ListenableFutureCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                completionStage.complete(result);
+            }
 
-                @Override
-                public void onFailure(Throwable t) {
-                    myOnFailure.accept(t);
-                }
-            });
+            @Override
+            public void onFailure(Throwable t) {
+                completionStage.completeExceptionally(t);
+            }
         });
 
         completionStage.thenAccept(System.out::println);

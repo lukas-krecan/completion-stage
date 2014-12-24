@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.javacrumbs.completionstage;
+package net.javacrumbs.completionstage.completecompleted;
 
-import java.util.function.Consumer;
+import net.javacrumbs.completionstage.CompletableCompletionStage;
 
-/**
- * Interface that allows to register callbacks.
- * @param <T>
- */
-public interface Listenable<T> {
-    /**
-     * Add callbacks.
-     * @param onSuccess called when processing succeeds
-     * @param onFailure called when processing fails
-     */
-    public void addCallbacks(Consumer<? super T> onSuccess, Consumer<Throwable> onFailure);
+import java.util.concurrent.CompletableFuture;
+
+public class CompletableFutureCanYouCompleteCompletedTest extends AbstractCanYouCompleteAlreadyCompletedTest {
+    @Override
+    protected CompletableCompletionStage<String> createCompletionStage() {
+        return new CompletableCompletableFuture<>();
+    }
+
+    private static class CompletableCompletableFuture<T> extends CompletableFuture<T> implements CompletableCompletionStage<T> {
+
+    }
 }

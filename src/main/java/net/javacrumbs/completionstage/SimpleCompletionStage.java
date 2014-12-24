@@ -25,10 +25,10 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-class SimpleCompletionStage<T> implements CompletionStage<T> {
+class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     static final Executor SAME_THREAD_EXECUTOR = Runnable::run;
 
-    private final ListenableCallbackRegistry<T> callbackRegistry = new ListenableCallbackRegistry<>();
+    private final CallbackRegistry<T> callbackRegistry = new CallbackRegistry<>();
     private final Executor defaultExecutor;
 
     /**
@@ -43,16 +43,18 @@ class SimpleCompletionStage<T> implements CompletionStage<T> {
      * Notifies all callbacks about the result.
      * @param result result of the previous stage.
      */
-    public void complete(T result) {
-        callbackRegistry.success(result);
+    @Override
+    public boolean complete(T result) {
+        return callbackRegistry.success(result);
     }
 
     /**
      * Notifies all callbacks about the failure.
-     * @param e exception thrown from the previous stage.
+     * @param ex exception thrown from the previous stage.
      */
-    public void completeExceptionally(Throwable e) {
-        callbackRegistry.failure(e);
+    @Override
+    public boolean completeExceptionally(Throwable ex) {
+        return callbackRegistry.failure(ex);
     }
 
     @Override
