@@ -24,7 +24,8 @@ import java.util.function.Consumer;
 /**
  * Registry for Consumer callbacks
  *
- * <p>Inspired by {@code org.springframework.util.concurrent.ListenableFutureCallbackRegistry}
+ * <p>Inspired by {@code org.springframework.util.concurrent.ListenableFutureCallbackRegistry} and
+ * {@code com.google.common.util.concurrent.ExecutionList}</p>
  *
  */
 class CallbackRegistry<T> {

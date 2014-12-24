@@ -298,7 +298,7 @@ public abstract class AbstractCompletionStageTest {
 
         BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
 
-        completionStage1.thenCombineAsync(completionStage2, (a, b) -> {
+        completionStage1.thenCombine(completionStage2, (a, b) -> {
             throw EXCEPTION;
         }).handle(handler);
 
