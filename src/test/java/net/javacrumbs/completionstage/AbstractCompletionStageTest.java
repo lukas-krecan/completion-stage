@@ -38,6 +38,9 @@ import static org.mockito.Mockito.when;
  * Transformation to function
  * then compose
  * state
+ * coverage is great
+ * exception handling in combine (which one will handle the exception?)
+ * CompletableFuture.doThenCombine
  */
 @SuppressWarnings("unchecked")
 public abstract class AbstractCompletionStageTest {
@@ -56,7 +59,15 @@ public abstract class AbstractCompletionStageTest {
 
     private final List<Throwable> failures = new CopyOnWriteArrayList<>();
 
-    protected Executor defaultExecutor = new ThreadNamingExecutor(IN_DEFAULT_EXECUTOR_THREAD_NAME);
+    protected Executor defaultExecutor = command -> {
+        String originalThreadName = currentThread().getName();
+        currentThread().setName(IN_DEFAULT_EXECUTOR_THREAD_NAME);
+        try {
+            command.run();
+        } finally {
+            currentThread().setName(originalThreadName);
+        }
+    };
 
     protected boolean finished() {
         return true;
@@ -276,6 +287,24 @@ public abstract class AbstractCompletionStageTest {
 
         verify(combiner).apply(VALUE2, VALUE);
         verify(consumer).accept(5);
+    }
+
+    @Test
+    public void combineShouldHandleExceptionCorrectly() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage2);
+
+
+        BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
+
+        completionStage1.thenCombineAsync(completionStage2, (a, b) -> {
+            throw EXCEPTION;
+        }).handle(handler);
+
+        finish(completionStage1);
+
+        verify(handler).apply(isNull(String.class), isA(CompletionException.class));
     }
 
     @Test
@@ -537,6 +566,11 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage);
 
         verify(handler, times(1)).apply(isNull(String.class), isA(CompletionException.class));
+    }
+
+    @Test
+    public void testLongAsyncComposition() {
+        //createCompletionStage(VALUE)
     }
 
     /**
