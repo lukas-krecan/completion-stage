@@ -1,6 +1,7 @@
 package net.javacrumbs.completionstage;
 
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -19,8 +20,10 @@ import static java.lang.Thread.currentThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.isA;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -59,15 +62,7 @@ public abstract class AbstractCompletionStageTest {
 
     private final List<Throwable> failures = new CopyOnWriteArrayList<>();
 
-    protected Executor defaultExecutor = command -> {
-        String originalThreadName = currentThread().getName();
-        currentThread().setName(IN_DEFAULT_EXECUTOR_THREAD_NAME);
-        try {
-            command.run();
-        } finally {
-            currentThread().setName(originalThreadName);
-        }
-    };
+    protected Executor defaultExecutor = new ThreadNamingExecutor(IN_DEFAULT_EXECUTOR_THREAD_NAME);
 
     protected boolean finished() {
         return true;
@@ -232,7 +227,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
         verify(conversion).apply(VALUE);
     }
 
@@ -249,7 +244,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
         verify(consumer).accept(null);
     }
 
@@ -304,7 +299,25 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage1);
 
-        verify(handler).apply(isNull(String.class), isA(CompletionException.class));
+        verify(handler).apply(isNull(String.class), isACompletionException());
+    }
+
+    @Test
+    public void combineShouldHandlePreviousStageFailureCorrectly() {
+        CompletionStage<String> completionStage1 = createCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage2);
+
+
+        BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
+        BiFunction<String, String, Integer> combiner = mock(BiFunction.class);
+
+        completionStage1.thenCombine(completionStage2, combiner).handle(handler);
+
+        finish(completionStage1);
+
+        verify(handler).apply(isNull(String.class), isACompletionException());
+        verifyZeroInteractions(combiner);
     }
 
     @Test
@@ -356,7 +369,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
         verify(consumer).accept(VALUE);
     }
 
@@ -383,7 +396,7 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage);
 
         verifyZeroInteractions(consumer);
-        verify(errorFunction, times(1)).apply(isA(CompletionException.class));
+        verify(errorFunction, times(1)).apply(isACompletionException());
     }
 
     @Test
@@ -411,7 +424,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
     }
 
     @Test
@@ -427,7 +440,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
     }
 
     @Test
@@ -467,8 +480,8 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(consumer).accept((Integer) isNull(), isA(CompletionException.class));
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(consumer).accept((Integer) isNull(), isACompletionException());
+        verify(errorHandler).apply(isACompletionException());
     }
 
     @Test
@@ -483,7 +496,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
     }
 
     @Test
@@ -498,7 +511,7 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(errorHandler).apply(isA(CompletionException.class));
+        verify(errorHandler).apply(isACompletionException());
     }
 
     @Test
@@ -526,6 +539,21 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage2);
 
         verify(consumer, times(1)).accept(VALUE2);
+    }
+
+    @Test
+    public void thenComposePassesPreviousFailure() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+
+        BiFunction<String, Throwable, ?> handler = mock(BiFunction.class);
+        completionStage.thenCompose(r -> completionStage2).handle(handler);
+
+        finish(completionStage);
+        finish(completionStage2);
+
+        verify(handler).apply(isNull(String.class), isACompletionException());
     }
 
     @Test
@@ -565,12 +593,156 @@ public abstract class AbstractCompletionStageTest {
 
         finish(completionStage);
 
-        verify(handler, times(1)).apply(isNull(String.class), isA(CompletionException.class));
+        verify(handler, times(1)).apply(isNull(String.class), isACompletionException());
     }
 
     @Test
-    public void testLongAsyncComposition() {
-        //createCompletionStage(VALUE)
+    public void combineAsyncShouldWork() throws ExecutionException, InterruptedException {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+        CompletionStage<String> combined = completionStage1.thenCombineAsync(completionStage2, (a, b) -> a + b);
+
+        finish(completionStage1);
+        finish(completionStage2);
+
+        assertThat(combined.toCompletableFuture().get()).isEqualTo(VALUE + VALUE2);
+    }
+
+    @Test
+    public void runAfterBothAsyncShouldWaitForBoth() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+        Runnable runnable = mock(Runnable.class);
+        CompletionStage<Void> newCompletionStage = completionStage1.runAfterBothAsync(completionStage2, runnable);
+
+        finish(completionStage1);
+        finish(completionStage2);
+
+        waitForIt(newCompletionStage);
+        verify(runnable, times(1)).run();
+    }
+
+    @Test
+    public void thenAcceptBothAsyncShouldWaitForBoth() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+        BiConsumer<String, String> consumer = mock(BiConsumer.class);
+        CompletionStage<Void> newCompletionStage = completionStage1.thenAcceptBothAsync(completionStage2, consumer);
+
+        finish(completionStage1);
+        finish(completionStage2);
+
+        waitForIt(newCompletionStage);
+        verify(consumer).accept(VALUE, VALUE2);
+    }
+
+    @Test
+    public void applyToEitherShouldProcessOnlyOne() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage1);
+
+        Function<? super String, Object> function = mock(Function.class);
+        completionStage1.applyToEither(completionStage2, function);
+
+        finish(completionStage2);
+
+        verify(function, times(1)).apply(anyString());
+    }
+
+    @Test
+    public void applyToEitherAsyncShouldProcessOnlyOne() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage1);
+
+        Function<String, Object> function = mock(Function.class);
+        CompletionStage<Object> newCompletionStage = completionStage1.applyToEitherAsync(completionStage2, function);
+
+        finish(completionStage2);
+
+        waitForIt(newCompletionStage);
+
+        verify(function).apply(anyString());
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void acceptEitherAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage1);
+        finish(completionStage2);
+
+        completionStage1.acceptEitherAsync(completionStage2, x -> {});
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void runAfterEitherAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage1);
+        finish(completionStage2);
+
+        completionStage1.runAfterEitherAsync(completionStage2, () -> {});
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void thenComposeAsyncAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+        finish(completionStage1);
+        finish(completionStage2);
+
+        completionStage1.thenComposeAsync(x -> completionStage2);
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void whenCompleteAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        finish(completionStage1);
+
+        completionStage1.whenCompleteAsync((r, e) -> {});
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void handleAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        finish(completionStage1);
+
+        completionStage1.handleAsync((r, e) -> 1);
+    }
+
+    @Test // just for code coverage. The code is tested by sync version
+    public void thenRunAsyncDoesNotFail() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        finish(completionStage1);
+
+        completionStage1.thenRunAsync(() -> {});
+    }
+
+
+    private void waitForIt(CompletionStage<?> newCompletionStage) {
+        try {
+            newCompletionStage.toCompletableFuture().get();
+        } catch (InterruptedException | ExecutionException e) {
+            fail(e.getMessage());
+        }
+    }
+
+    private CompletionException isACompletionException() {
+        return argThat(new ArgumentMatcher<CompletionException>() {
+            @Override
+            public boolean matches(Object argument) {
+                if (argument instanceof CompletionException) {
+                    return ((CompletionException) argument).getCause() == EXCEPTION;
+                } else {
+                    return false;
+                }
+            }
+        });
     }
 
     /**
