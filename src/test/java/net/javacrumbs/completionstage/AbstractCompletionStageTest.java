@@ -37,6 +37,7 @@ import static org.mockito.Mockito.when;
  * Duplicity
  * Transformation to function
  * then compose
+ * state
  */
 @SuppressWarnings("unchecked")
 public abstract class AbstractCompletionStageTest {
