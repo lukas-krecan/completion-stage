@@ -21,14 +21,14 @@ import java.util.concurrent.Executor;
  * Factory for {@link java.util.concurrent.CompletionStage} implementation.
  */
 public class CompletionStageFactory {
-    private final Executor defaultExecutor;
+    private final Executor defaultAsyncExecutor;
 
     /**
      * Creates factory.
-     * @param defaultExecutor executor to be used for async methods without executor parameter
+     * @param defaultAsyncExecutor executor to be used for async methods without executor parameter
      */
-    public CompletionStageFactory(Executor defaultExecutor) {
-        this.defaultExecutor = defaultExecutor;
+    public CompletionStageFactory(Executor defaultAsyncExecutor) {
+        this.defaultAsyncExecutor = defaultAsyncExecutor;
     }
 
     /**
@@ -37,6 +37,6 @@ public class CompletionStageFactory {
      * @return CompletionStage
      */
     public <T> CompletableCompletionStage<T> createCompletionStage() {
-        return new SimpleCompletionStage<>(defaultExecutor);
+        return new SimpleCompletionStage<>(defaultAsyncExecutor);
     }
 }

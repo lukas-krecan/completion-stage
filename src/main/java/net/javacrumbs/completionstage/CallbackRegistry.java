@@ -75,6 +75,11 @@ class CallbackRegistry<T> {
 		}
 	}
 
+	/**
+	 * To be called to set the result value.
+	 * @param result the result value
+	 * @return true if this result will be used (first result registered)
+	 */
 	public boolean success(T result) {
 		synchronized (mutex) {
 			if (state != State.NEW) {
@@ -93,6 +98,11 @@ class CallbackRegistry<T> {
 		}
 	}
 
+	/**
+	 * To be called to set the failure exception
+	 * @param t the execption
+	 * @return  true if this result will be used (first result registered)
+	 */
 	public boolean failure(Throwable t) {
 		synchronized (mutex) {
 			if (state != State.NEW) {

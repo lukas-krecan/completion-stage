@@ -26,10 +26,17 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * {@link java.util.concurrent.CompletionStage} implementation.
+ * Keeps the result or callbacks in {@link net.javacrumbs.completionstage.CallbackRegistry}
+ */
 class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     static final Executor SAME_THREAD_EXECUTOR = Runnable::run;
 
     private final CallbackRegistry<T> callbackRegistry = new CallbackRegistry<>();
+    /**
+     * Default executor to be used for Async methods.
+     */
     private final Executor defaultExecutor;
 
     /**
@@ -288,7 +295,6 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         SimpleCompletionStage<T> newCompletionStage = newSimpleCompletionStage();
         callbackRegistry.addCallbacks(
                 newCompletionStage::complete,
-                // null in the following line is ignored. e is used instead
                 e -> generateResultAndSendItToNextStage(() -> fn.apply(e), newCompletionStage),
                 SAME_THREAD_EXECUTOR
         );

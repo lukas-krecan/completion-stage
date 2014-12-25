@@ -31,6 +31,21 @@ public class LaunchTest {
                 .exceptionally(this::playAlertSound);
     }
 
+    @Test
+    public void testLaunchWithLavaLamp() {
+
+        CompletableFuture<Boolean> missilesLaunched =
+                getAuthorizationCode()
+                .thenApply(this::launchMissiles);
+
+        missilesLaunched
+                .thenApply(this::generateDamageReport)
+                .thenAccept(this::updateMainScreen)
+                .exceptionally(this::playAlertSound);
+
+        missilesLaunched.thenAccept(LavaLamp::turnOn);
+    }
+
     private Void playAlertSound(Throwable throwable) {
         return null;
     }
@@ -53,5 +68,11 @@ public class LaunchTest {
     }
 
     private class AuthorizationCode {
+    }
+
+    private static class LavaLamp {
+        public static void turnOn(Boolean aBoolean) {
+
+        }
     }
 }
