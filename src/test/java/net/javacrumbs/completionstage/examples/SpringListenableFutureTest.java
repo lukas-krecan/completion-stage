@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.javacrumbs.completionstage;
+package net.javacrumbs.completionstage.examples;
 
+import net.javacrumbs.completionstage.CompletableCompletionStage;
+import net.javacrumbs.completionstage.CompletionStageFactory;
 import org.junit.Test;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.support.TaskExecutorAdapter;
