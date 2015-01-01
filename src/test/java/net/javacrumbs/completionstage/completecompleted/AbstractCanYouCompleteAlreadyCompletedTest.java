@@ -31,7 +31,7 @@ public abstract class AbstractCanYouCompleteAlreadyCompletedTest {
 
     protected static final String VALUE = "value";
     protected static final String VALUE2 = "value2";
-    public static final RuntimeException EXCEPTION = new RuntimeException();
+    protected static final RuntimeException EXCEPTION = new RuntimeException();
 
     protected abstract CompletableCompletionStage<String> createCompletionStage();
 

@@ -34,7 +34,7 @@ public class LaunchTest {
     @Test
     public void testLaunchWithLavaLamp() {
 
-        CompletableFuture<Boolean> missilesLaunched =
+        CompletableFuture<LaunchResult> missilesLaunched =
                 getAuthorizationCode()
                 .thenApply(this::launchMissiles);
 
@@ -54,12 +54,12 @@ public class LaunchTest {
 
     }
 
-    private String generateDamageReport(Boolean result) {
+    private String generateDamageReport(LaunchResult result) {
         return null;
     }
 
-    private boolean launchMissiles(AuthorizationCode authorizationCode) {
-        return false;
+    private LaunchResult launchMissiles(AuthorizationCode authorizationCode) {
+        return null;
     }
 
 
@@ -71,8 +71,11 @@ public class LaunchTest {
     }
 
     private static class LavaLamp {
-        public static void turnOn(Boolean aBoolean) {
+        public static void turnOn(LaunchResult aBoolean) {
 
         }
+    }
+
+    private class LaunchResult {
     }
 }

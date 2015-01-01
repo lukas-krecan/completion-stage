@@ -100,7 +100,7 @@ class CallbackRegistry<T> {
 
 	/**
 	 * To be called to set the failure exception
-	 * @param t the execption
+	 * @param t the exception
 	 * @return  true if this result will be used (first result registered)
 	 */
 	public boolean failure(Throwable t) {

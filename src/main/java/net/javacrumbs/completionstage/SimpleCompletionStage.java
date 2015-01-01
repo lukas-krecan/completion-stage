@@ -203,33 +203,18 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor) {
         SimpleCompletionStage<U> newCompletionStage = newSimpleCompletionStage();
         AtomicBoolean processed = new AtomicBoolean(false);
-        callbackRegistry.addCallbacks(
-                result -> {
-                    if (not(processed)) {
-                        generateResultAndSendItToNextStage(() -> fn.apply(result), newCompletionStage);
-                    }
-                },
-                e -> {
-                    if (not(processed)) {
-                        handleFailure(newCompletionStage, e);
-                    }
-                },
-                executor
-        );
-        other.whenCompleteAsync((result, failure) -> {
-            if (not(processed)) {
+        BiConsumer<T, Throwable> action = (result, failure) -> {
+            if (processed.compareAndSet(false, true)) {
                 if (failure == null) {
                     generateResultAndSendItToNextStage(() -> fn.apply(result), newCompletionStage);
                 } else {
                     handleFailure(newCompletionStage, failure);
                 }
             }
-        }, executor);
+        };
+        this.whenCompleteAsync(action, executor);
+        other.whenCompleteAsync(action, executor);
         return newCompletionStage;
-    }
-
-    private boolean not(AtomicBoolean processed) {
-        return processed.compareAndSet(false, true);
     }
 
     @Override
