@@ -141,11 +141,14 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         SimpleCompletionStage<V> nextStage = newSimpleCompletionStage();
         addCallbacks(
                 result1 ->
-                        other.thenAccept(
-                                result2 -> nextStage.acceptResult(
-                                        () -> fn.apply(result1, result2)
-                                )
-                        ).exceptionally(nextStage::handleFailure),
+                        other.whenComplete((result2, failure) -> {
+                                    if (failure == null) {
+                                        nextStage.acceptResult(() -> fn.apply(result1, result2));
+                                    } else {
+                                        nextStage.handleFailure(failure);
+                                    }
+                                }
+                        ),
                 nextStage::handleFailure,
                 executor
         );
