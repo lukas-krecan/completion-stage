@@ -134,12 +134,18 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     }
 
     @Override
-    public <U, V> CompletionStage<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn, Executor executor) {
+    public <U, V> CompletionStage<V> thenCombineAsync(
+            CompletionStage<? extends U> other,
+            BiFunction<? super T, ? super U, ? extends V> fn,
+            Executor executor) {
         SimpleCompletionStage<V> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result1 -> other.thenAccept(
-                        result2 -> generateResultAndSendItToNextStage(() -> fn.apply(result1, result2), nextStage)
-                ),
+                result1 -> other
+                        .thenAccept(
+                                result2 -> generateResultAndSendItToNextStage(
+                                        () -> fn.apply(result1, result2), nextStage
+                                )
+                        ).exceptionally(e -> handleFailure(e, nextStage)),
                 e -> handleFailure(e, nextStage),
                 executor
         );
@@ -333,7 +339,9 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     }
 
     @Override
-    public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
+    public <U> CompletionStage<U> handleAsync(
+            BiFunction<? super T, Throwable, ? extends U> fn,
+            Executor executor) {
         SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
         addCallbacks(
                 result -> generateResultAndSendItToNextStage(() -> fn.apply(result, null), nextStage),
@@ -397,8 +405,9 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
      * @param e         the exception
      * @param nextStage stage to send the exception to
      */
-    private void handleFailure(Throwable e, SimpleCompletionStage<?> nextStage) {
+    private Void handleFailure(Throwable e, SimpleCompletionStage<?> nextStage) {
         nextStage.completeExceptionally(wrapException(e));
+        return null;
     }
 
     private Throwable wrapException(Throwable e) {

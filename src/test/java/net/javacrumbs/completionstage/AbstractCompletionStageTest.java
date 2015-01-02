@@ -336,6 +336,24 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void combineShouldHandleTheOtherPreviousStageFailureCorrectly() {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
+        finish(completionStage2);
+
+
+        BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
+        BiFunction<String, String, Integer> combiner = mock(BiFunction.class);
+
+        completionStage1.thenCombine(completionStage2, combiner).handle(handler);
+
+        finish(completionStage1);
+
+        verify(handler).apply(isNull(String.class), isACompletionException());
+        verifyZeroInteractions(combiner);
+    }
+
+    @Test
     public void shouldAcceptBothValues() {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
