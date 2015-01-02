@@ -235,11 +235,10 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             }
         };
 
-        // TODO: Should this be async???
         // only one result is accepted by completion stage,
         // the other one is ignored
-        this.whenCompleteAsync(action, executor);
-        other.whenCompleteAsync(action, executor);
+        this.whenComplete(action);
+        other.whenComplete(action);
 
         return nextStage.thenApplyAsync(fn, executor);
     }
