@@ -2,8 +2,8 @@ CompletionStage alternative implementation
 ==========================================
 
 An alternative implementation to Java 8 [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html).
-Its main focus to simplify support of [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) in
-libraries.
+Its main focus is to simplify support of [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) in
+other libraries.
 
 # How to use
 
@@ -12,7 +12,7 @@ Add Maven dependency
     <dependency>
         <groupId>net.javacrumbs.completion-stage</groupId>
         <artifactId>completion-stage</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.2</version>
     </dependency>
 
 And enjoy
