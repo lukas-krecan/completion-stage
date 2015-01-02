@@ -39,6 +39,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -618,6 +619,24 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage2);
 
         verify(handler).apply(isNull(String.class), isACompletionException());
+    }
+
+    @Test
+    public void thenComposePassesFailureFromTheOtherCompletionStage() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
+
+
+        BiConsumer<String, Throwable> consumer = mock(BiConsumer.class);
+        completionStage.thenCompose(r -> completionStage2).whenComplete(consumer);
+
+        finish(completionStage);
+        finish(completionStage2);
+
+        //TODO: uncomment when response for
+        // http://stackoverflow.com/questions/27747976/why-java-8-completablefuture-thencompose-generates-different-exception-depending is known
+        // verify(consumer).accept(isNull(String.class), isACompletionException());
+        verify(consumer).accept(isNull(String.class), isA(Exception.class));
     }
 
 

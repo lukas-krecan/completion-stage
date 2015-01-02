@@ -145,22 +145,7 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             CompletionStage<? extends U> other,
             BiFunction<? super T, ? super U, ? extends V> fn,
             Executor executor) {
-        SimpleCompletionStage<V> nextStage = newSimpleCompletionStage();
-        addCallbacks(
-                result1 ->
-                        other.whenCompleteAsync((result2, failure) -> {
-                                    if (failure == null) {
-                                        nextStage.acceptResult(() -> fn.apply(result1, result2));
-                                    } else {
-                                        nextStage.handleFailure(failure);
-                                    }
-                                },
-                        executor),
-                nextStage::handleFailure,
-                // can be executed in the same thread, it just registers new callback
-                SAME_THREAD_EXECUTOR
-        );
-        return nextStage;
+        return thenCompose(result1 -> other.thenApplyAsync(result2 -> fn.apply(result1, result2), executor));
     }
 
     @Override
@@ -287,9 +272,15 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor) {
         SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result -> {
+                result1 -> {
                     try {
-                        fn.apply(result).thenAccept(nextStage::complete);
+                        fn.apply(result1).whenComplete((result2, failure) -> {
+                            if (failure == null) {
+                                nextStage.complete(result2);
+                            } else {
+                                nextStage.handleFailure(failure);
+                            }
+                        });
                     } catch (Throwable e) {
                         nextStage.handleFailure(e);
                     }
