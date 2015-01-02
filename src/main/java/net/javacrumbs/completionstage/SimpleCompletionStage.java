@@ -115,7 +115,6 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         return thenApplyAsync(convertConsumerToFunction(action), executor);
     }
 
-
     @Override
     public CompletionStage<Void> thenRun(Runnable action) {
         return thenRunAsync(action, SAME_THREAD_EXECUTOR);
@@ -235,7 +234,7 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             }
         };
 
-        // only one result is accepted by completion stage,
+        // only the first result is accepted by completion stage,
         // the other one is ignored
         this.whenComplete(action);
         other.whenComplete(action);
@@ -418,9 +417,8 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
      *
      * @param e the exception
      */
-    private Void handleFailure(Throwable e) {
+    private void handleFailure(Throwable e) {
         completeExceptionally(wrapException(e));
-        return null;
     }
 
     private Throwable wrapException(Throwable e) {
