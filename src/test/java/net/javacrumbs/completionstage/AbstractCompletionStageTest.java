@@ -359,9 +359,17 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
 
 
-        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
+        Executor executor = command -> {
+            String originalName = currentThread().getName();
+            currentThread().setName(IN_EXECUTOR_THREAD_NAME);
+            try {
+                command.run();
+            } finally {
+                currentThread().setName(originalName);
+            }
+        };
 
-        CompletableFuture<Object> completableFuture = completionStage1.thenCombineAsync(completionStage2, (r, e) -> {
+        CompletableFuture<Object> completableFuture = completionStage1.thenCombineAsync(completionStage2, (r1, r2) -> {
             assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
             return null;
         }, executor).toCompletableFuture();

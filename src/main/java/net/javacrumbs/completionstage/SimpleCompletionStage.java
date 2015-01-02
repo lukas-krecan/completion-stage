@@ -149,16 +149,17 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         SimpleCompletionStage<V> nextStage = newSimpleCompletionStage();
         addCallbacks(
                 result1 ->
-                        other.whenComplete((result2, failure) -> {
+                        other.whenCompleteAsync((result2, failure) -> {
                                     if (failure == null) {
                                         nextStage.acceptResult(() -> fn.apply(result1, result2));
                                     } else {
                                         nextStage.handleFailure(failure);
                                     }
-                                }
-                        ),
+                                },
+                        executor),
                 nextStage::handleFailure,
-                executor
+                // can be executed in the same thread, it just registers new callback
+                SAME_THREAD_EXECUTOR
         );
         return nextStage;
     }
