@@ -401,6 +401,17 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void exceptionFromTheNextPhaseShouldNotAffectPreviousPhases() {
+        CompletionStage<String> completionStage = createCompletionStage(VALUE);
+        BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
+
+        completionStage.thenApply(String::length).thenApply(i -> {throw EXCEPTION;}).handle(handler);
+        finish(completionStage);
+
+        verify(handler, times(1)).apply(isNull(), isACompletionException());
+    }
+
+    @Test
     public void shouldNotFailOnException() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
