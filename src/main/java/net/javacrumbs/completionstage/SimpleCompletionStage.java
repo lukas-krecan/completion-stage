@@ -85,8 +85,8 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     ) {
         SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result -> generateResultAndSendItToNextStage(() -> fn.apply(result), nextStage),
-                e -> handleFailure(e, nextStage),
+                result -> nextStage.acceptResult(() -> fn.apply(result)),
+                nextStage::handleFailure,
                 executor
         );
         return nextStage;
@@ -140,13 +140,13 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             Executor executor) {
         SimpleCompletionStage<V> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result1 -> other
-                        .thenAccept(
-                                result2 -> generateResultAndSendItToNextStage(
-                                        () -> fn.apply(result1, result2), nextStage
+                result1 ->
+                        other.thenAccept(
+                                result2 -> nextStage.acceptResult(
+                                        () -> fn.apply(result1, result2)
                                 )
-                        ).exceptionally(e -> handleFailure(e, nextStage)),
-                e -> handleFailure(e, nextStage),
+                        ).exceptionally(nextStage::handleFailure),
+                nextStage::handleFailure,
                 executor
         );
         return nextStage;
@@ -209,15 +209,20 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     }
 
     @Override
-    public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor) {
+    public <U> CompletionStage<U> applyToEitherAsync(
+            CompletionStage<? extends T> other,
+            Function<? super T, U> fn,
+            Executor executor) {
         SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
+        // we have to keep track if we have already processed a value
+        // we do not want to call the function fn multiple times
         AtomicBoolean processed = new AtomicBoolean(false);
         BiConsumer<T, Throwable> action = (result, failure) -> {
             if (processed.compareAndSet(false, true)) {
                 if (failure == null) {
-                    generateResultAndSendItToNextStage(() -> fn.apply(result), nextStage);
+                    nextStage.acceptResult(() -> fn.apply(result));
                 } else {
-                    handleFailure(failure, nextStage);
+                    nextStage.handleFailure(failure);
                 }
             }
         };
@@ -275,10 +280,10 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
                     try {
                         fn.apply(result).thenAccept(nextStage::complete);
                     } catch (Throwable e) {
-                        handleFailure(e, nextStage);
+                        nextStage.handleFailure(e);
                     }
                 },
-                e -> handleFailure(e, nextStage),
+                nextStage::handleFailure,
                 executor
         );
         return nextStage;
@@ -289,7 +294,7 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         SimpleCompletionStage<T> nextStage = newSimpleCompletionStage();
         addCallbacks(
                 nextStage::complete,
-                e -> generateResultAndSendItToNextStage(() -> fn.apply(e), nextStage),
+                e -> nextStage.acceptResult(() -> fn.apply(e)),
                 SAME_THREAD_EXECUTOR
         );
         return nextStage;
@@ -309,19 +314,18 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor) {
         SimpleCompletionStage<T> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result -> generateResultAndSendItToNextStage(
+                result -> nextStage.acceptResult(
                         () -> {
                             action.accept(result, null);
                             return null;
-                        },
-                        nextStage
+                        }
                 ),
                 failure -> {
                     try {
                         action.accept(null, failure);
-                        handleFailure(failure, nextStage);
+                        nextStage.handleFailure(failure);
                     } catch (Throwable e) {
-                        handleFailure(e, nextStage);
+                        nextStage.handleFailure(e);
                     }
                 }, executor
         );
@@ -344,9 +348,9 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             Executor executor) {
         SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
         addCallbacks(
-                result -> generateResultAndSendItToNextStage(() -> fn.apply(result, null), nextStage),
+                result -> nextStage.acceptResult(() -> fn.apply(result, null)),
                 // exceptions are treated as success
-                e -> generateResultAndSendItToNextStage(() -> fn.apply(null, e), nextStage),
+                e -> nextStage.acceptResult(() -> fn.apply(null, e)),
                 executor
         );
         return nextStage;
@@ -384,29 +388,26 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     }
 
     /**
-     * Generates the result using supplier and sends it to nextStage. Exceptions are handled using handleFailure
+     * Accepts result provided by the Supplier. If an exception is thrown by the supplier, completes exceptionally.
      *
-     * @param supplier  generates result
-     * @param nextStage stage to send the result to
-     * @param <U>       return type
+     * @param supplier generates result
      */
-    private <U> void generateResultAndSendItToNextStage(Supplier<? extends U> supplier, SimpleCompletionStage<U> nextStage) {
+    private void acceptResult(Supplier<? extends T> supplier) {
         try {
             // exception can be thrown only by supplier. All callbacks are generated by us and they do not throw any exceptions
-            nextStage.complete(supplier.get());
+            complete(supplier.get());
         } catch (Throwable e) {
-            handleFailure(e, nextStage);
+            handleFailure(e);
         }
     }
 
     /**
-     * Wraps exception and sends it to next execution stage.
+     * Wraps exception completes exceptionally.
      *
-     * @param e         the exception
-     * @param nextStage stage to send the exception to
+     * @param e the exception
      */
-    private Void handleFailure(Throwable e, SimpleCompletionStage<?> nextStage) {
-        nextStage.completeExceptionally(wrapException(e));
+    private Void handleFailure(Throwable e) {
+        completeExceptionally(wrapException(e));
         return null;
     }
 
@@ -421,6 +422,4 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
     private void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         callbackRegistry.addCallbacks(successCallback, failureCallback, executor);
     }
-
-
 }
