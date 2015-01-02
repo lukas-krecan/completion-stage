@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -31,7 +30,16 @@ import java.util.function.Supplier;
  * Keeps the result or callbacks in {@link net.javacrumbs.completionstage.CallbackRegistry}
  */
 class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
-    static final Executor SAME_THREAD_EXECUTOR = Runnable::run;
+    static final Executor SAME_THREAD_EXECUTOR = new Executor() {
+        @Override
+        public void execute(Runnable command) {
+            command.run();
+        }
+        @Override
+        public String toString() {
+            return "SAME_THREAD_EXECUTOR";
+        }
+    };
 
     private final CallbackRegistry<T> callbackRegistry = new CallbackRegistry<>();
     /**
@@ -216,22 +224,23 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             CompletionStage<? extends T> other,
             Function<? super T, U> fn,
             Executor executor) {
-        SimpleCompletionStage<U> nextStage = newSimpleCompletionStage();
-        // we have to keep track if we have already processed a value
-        // we do not want to call the function fn multiple times
-        AtomicBoolean processed = new AtomicBoolean(false);
+        SimpleCompletionStage<T> nextStage = newSimpleCompletionStage();
+
         BiConsumer<T, Throwable> action = (result, failure) -> {
-            if (processed.compareAndSet(false, true)) {
-                if (failure == null) {
-                    nextStage.acceptResult(() -> fn.apply(result));
-                } else {
-                    nextStage.handleFailure(failure);
-                }
+            if (failure == null) {
+                nextStage.complete(result);
+            } else {
+                nextStage.completeExceptionally(failure);
             }
         };
+
+        // TODO: Should this be async???
+        // only one result is accepted by completion stage,
+        // the other one is ignored
         this.whenCompleteAsync(action, executor);
         other.whenCompleteAsync(action, executor);
-        return nextStage;
+
+        return nextStage.thenApplyAsync(fn, executor);
     }
 
     @Override
@@ -320,7 +329,7 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
                 result -> nextStage.acceptResult(
                         () -> {
                             action.accept(result, null);
-                            return null;
+                            return result;
                         }
                 ),
                 failure -> {

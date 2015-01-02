@@ -354,6 +354,25 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void combineAsyncShouldExecuteFunctionInCorrectExecutor() throws ExecutionException, InterruptedException {
+        CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
+        CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
+
+
+        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
+
+        CompletableFuture<Object> completableFuture = completionStage1.thenCombineAsync(completionStage2, (r, e) -> {
+            assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
+            return null;
+        }, executor).toCompletableFuture();
+
+        finish(completionStage1);
+        finish(completionStage2);
+
+        completableFuture.get();
+    }
+
+    @Test
     public void shouldAcceptBothValues() {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
@@ -423,7 +442,9 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         BiFunction<Object, Throwable, ?> handler = mock(BiFunction.class);
 
-        completionStage.thenApply(String::length).thenApply(i -> {throw EXCEPTION;}).handle(handler);
+        completionStage.thenApply(String::length).thenApply(i -> {
+            throw EXCEPTION;
+        }).handle(handler);
         finish(completionStage);
 
         verify(handler, times(1)).apply(isNull(), isACompletionException());
@@ -507,11 +528,13 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
         BiConsumer<Integer, Throwable> consumer = mock(BiConsumer.class);
-        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer);
+        Consumer<Integer> consumer2 = mock(Consumer.class);
+        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer).thenAccept(consumer2);
 
         finish(completionStage);
 
         verify(consumer).accept(8, null);
+        verify(consumer2).accept(8);
     }
 
     @Test
@@ -599,6 +622,7 @@ public abstract class AbstractCompletionStageTest {
 
         verify(handler).apply(isNull(String.class), isACompletionException());
     }
+
 
     @Test
     public void toCompletableFutureShouldPassValue() throws ExecutionException, InterruptedException {
@@ -720,7 +744,8 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage1);
         finish(completionStage2);
 
-        completionStage1.acceptEitherAsync(completionStage2, x -> {});
+        completionStage1.acceptEitherAsync(completionStage2, x -> {
+        });
     }
 
     @Test // just for code coverage. The code is tested by sync version
@@ -730,7 +755,8 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage1);
         finish(completionStage2);
 
-        completionStage1.runAfterEitherAsync(completionStage2, () -> {});
+        completionStage1.runAfterEitherAsync(completionStage2, () -> {
+        });
     }
 
     @Test // just for code coverage. The code is tested by sync version
@@ -748,7 +774,8 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         finish(completionStage1);
 
-        completionStage1.whenCompleteAsync((r, e) -> {});
+        completionStage1.whenCompleteAsync((r, e) -> {
+        });
     }
 
     @Test // just for code coverage. The code is tested by sync version
@@ -764,7 +791,8 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         finish(completionStage1);
 
-        completionStage1.thenRunAsync(() -> {});
+        completionStage1.thenRunAsync(() -> {
+        });
     }
 
 
