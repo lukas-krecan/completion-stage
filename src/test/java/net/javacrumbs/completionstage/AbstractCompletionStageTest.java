@@ -68,6 +68,7 @@ public abstract class AbstractCompletionStageTest {
     protected static final String IN_EXECUTOR_THREAD_NAME = "in executor";
     protected static final String IN_DEFAULT_EXECUTOR_THREAD_NAME = "in default executor";
     private static final String MAIN = "main";
+    private final Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
 
     protected abstract CompletionStage<String> createCompletionStage(String value);
 
@@ -128,7 +129,6 @@ public abstract class AbstractCompletionStageTest {
 
         CountDownLatch waitLatch = new CountDownLatch(1);
 
-        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
         completionStage.thenAcceptAsync(r -> {
             assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
             waitLatch.countDown();
@@ -146,7 +146,6 @@ public abstract class AbstractCompletionStageTest {
 
         CountDownLatch waitLatch = new CountDownLatch(1);
 
-        Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
         completionStage
                 .thenApplyAsync(r -> {
                     assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
@@ -358,16 +357,6 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
 
-
-        Executor executor = command -> {
-            String originalName = currentThread().getName();
-            currentThread().setName(IN_EXECUTOR_THREAD_NAME);
-            try {
-                command.run();
-            } finally {
-                currentThread().setName(originalName);
-            }
-        };
 
         CompletableFuture<Object> completableFuture = completionStage1.thenCombineAsync(completionStage2, (r1, r2) -> {
             assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
@@ -730,19 +719,20 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
-    public void applyToEitherAsyncShouldProcessOnlyOne() {
+    public void applyToEitherAsyncShouldExecuteFunctionInExecutor() {
         CompletionStage<String> completionStage1 = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage1);
 
-        Function<String, Object> function = mock(Function.class);
-        CompletionStage<Object> newCompletionStage = completionStage1.applyToEitherAsync(completionStage2, function);
+        CompletionStage<Object> newCompletionStage = completionStage1.applyToEitherAsync(completionStage2, s -> {
+            assertEquals(IN_EXECUTOR_THREAD_NAME, currentThread().getName());
+            return null;
+        }, executor);
 
         finish(completionStage2);
 
         waitForIt(newCompletionStage);
 
-        verify(function).apply(anyString());
     }
 
     @Test // just for code coverage. The code is tested by sync version
@@ -837,9 +827,13 @@ public abstract class AbstractCompletionStageTest {
 
         @Override
         public void execute(Runnable command) {
-            Thread thread = new Thread(command);
-            thread.setName(threadName);
-            thread.start();
+            String originalName = currentThread().getName();
+            currentThread().setName(threadName);
+            try {
+                command.run();
+            } finally {
+                currentThread().setName(originalName);
+            }
         }
     }
 }
