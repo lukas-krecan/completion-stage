@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  * <p>Inspired by {@code org.springframework.util.concurrent.ListenableFutureCallbackRegistry} and
  * {@code com.google.common.util.concurrent.ExecutionList}</p>
  */
-class CallbackRegistry<T> {
+final class CallbackRegistry<T> {
     private State state = new NewState();
 
     private final Object mutex = new Object();
@@ -145,7 +145,7 @@ class CallbackRegistry<T> {
     /**
      * Keeps the result.
      */
-    private class SuccessState extends State {
+    private final class SuccessState extends State {
         private final T result;
 
         private SuccessState(T result) {
@@ -161,7 +161,7 @@ class CallbackRegistry<T> {
     /**
      * Keeps the failure.
      */
-    private class FailureState extends State {
+    private final class FailureState extends State {
         private final Throwable failure;
 
         private FailureState(Throwable failure) {
@@ -175,7 +175,7 @@ class CallbackRegistry<T> {
     }
 
 
-    private static class CallbackExecutorPair<S> {
+    private static final class CallbackExecutorPair<S> {
         private final Consumer<S> callback;
         private final Executor executor;
 
