@@ -655,10 +655,8 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage);
         finish(completionStage2);
 
-        //TODO: uncomment when response for
-        // http://stackoverflow.com/questions/27747976/why-java-8-completablefuture-thencompose-generates-different-exception-depending is known
-        // verify(consumer).accept(isNull(String.class), isACompletionException());
-        verify(consumer).accept(isNull(String.class), isA(Exception.class));
+
+        verify(consumer).accept(isNull(String.class), isACompletionException());
     }
 
 
