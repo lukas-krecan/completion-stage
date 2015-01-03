@@ -201,6 +201,28 @@ public abstract class AbstractCompletionStageTest {
     }
 
     @Test
+    public void whenCompleteShouldAcceptUnwrappedException() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        BiConsumer<String, Throwable> consumer = mock(BiConsumer.class);
+        completionStage.whenComplete(consumer);
+
+        finish(completionStage);
+        verify(consumer, times(1)).accept(null, EXCEPTION);
+    }
+
+    @Test
+    public void handleShouldAcceptUnwrappedException() {
+        CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
+
+        BiFunction<String, Throwable, ?> handler = mock(BiFunction.class);
+        completionStage.handle(handler);
+
+        finish(completionStage);
+        verify(handler, times(1)).apply(null, EXCEPTION);
+    }
+
+    @Test
     public void exceptionallyShouldTranslateExceptionToAValue() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
@@ -212,7 +234,7 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage);
 
         verify(function, times(1)).apply(EXCEPTION);
-        verify(consumer).accept(VALUE);
+        verify(consumer, times(1)).accept(VALUE);
     }
 
     @Test
@@ -825,11 +847,7 @@ public abstract class AbstractCompletionStageTest {
         return argThat(new ArgumentMatcher<CompletionException>() {
             @Override
             public boolean matches(Object argument) {
-                if (argument instanceof CompletionException) {
-                    return ((CompletionException) argument).getCause() == EXCEPTION;
-                } else {
-                    return false;
-                }
+                return argument instanceof CompletionException && ((CompletionException) argument).getCause() == EXCEPTION;
             }
         });
     }
