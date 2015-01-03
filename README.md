@@ -12,7 +12,7 @@ Add Maven dependency
     <dependency>
         <groupId>net.javacrumbs.completion-stage</groupId>
         <artifactId>completion-stage</artifactId>
-        <version>0.0.2</version>
+        <version>0.0.3</version>
     </dependency>
 
 And enjoy
