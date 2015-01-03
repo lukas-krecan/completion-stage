@@ -211,16 +211,9 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
             Executor executor) {
         SimpleCompletionStage<T> nextStage = newSimpleCompletionStage();
 
-        BiConsumer<T, Throwable> action = (result, failure) -> {
-            if (failure == null) {
-                nextStage.complete(result);
-            } else {
-                nextStage.completeExceptionally(failure);
-            }
-        };
-
         // only the first result is accepted by completion stage,
         // the other one is ignored
+        BiConsumer<T, Throwable> action = nextStage.completeHandler();
         this.whenComplete(action);
         other.whenComplete(action);
 
@@ -274,13 +267,7 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         addCallbacks(
                 result1 -> {
                     try {
-                        fn.apply(result1).whenComplete((result2, failure) -> {
-                            if (failure == null) {
-                                nextStage.complete(result2);
-                            } else {
-                                nextStage.handleFailure(failure);
-                            }
-                        });
+                        fn.apply(result1).whenComplete(nextStage.completeHandler());
                     } catch (Throwable e) {
                         nextStage.handleFailure(e);
                     }
@@ -401,6 +388,20 @@ class SimpleCompletionStage<T> implements CompletableCompletionStage<T> {
         } catch (Throwable e) {
             handleFailure(e);
         }
+    }
+
+    /**
+     * Handler that can be used in whenComplete method.
+     * @return BiConsumer that passes values to this CompletionStage.
+     */
+    private BiConsumer<T, Throwable> completeHandler() {
+        return (result, failure) -> {
+            if (failure == null) {
+                complete(result);
+            } else {
+                handleFailure(failure);
+            }
+        };
     }
 
     /**
