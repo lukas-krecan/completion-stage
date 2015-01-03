@@ -79,6 +79,14 @@ final class CallbackRegistry<T> {
         }
     }
 
+    private static <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
+        executor.execute(() -> callback.accept(value));
+    }
+
+    private static <S> void callCallback(CallbackExecutorPair<S> callbackExecutorPair, S result) {
+        callCallback(callbackExecutorPair.getCallback(), result, callbackExecutorPair.getExecutor());
+    }
+
     /**
      * State of the registry.
      */
@@ -95,15 +103,6 @@ final class CallbackRegistry<T> {
 
         protected boolean isCompleted() {
             return true;
-        }
-
-
-        protected <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
-            executor.execute(() -> callback.accept(value));
-        }
-
-        protected <S> void callCallback(CallbackExecutorPair<S> callbackExecutorPair, S result) {
-            callCallback(callbackExecutorPair.getCallback(), result, callbackExecutorPair.getExecutor());
         }
     }
 
