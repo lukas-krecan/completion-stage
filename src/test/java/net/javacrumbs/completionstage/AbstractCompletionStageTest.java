@@ -39,7 +39,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -70,6 +69,9 @@ public abstract class AbstractCompletionStageTest {
     protected static final String IN_DEFAULT_EXECUTOR_THREAD_NAME = "in default executor";
     private static final String MAIN = "main";
     private final Executor executor = new ThreadNamingExecutor(IN_EXECUTOR_THREAD_NAME);
+    private final Consumer<String> consumer = mock(Consumer.class);
+    private final BiConsumer<String, Throwable> biConsumer = mock(BiConsumer.class);
+    private final Consumer<Integer> intConsumer = mock(Consumer.class);
 
     protected abstract CompletionStage<String> createCompletionStage(String value);
 
@@ -92,7 +94,6 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage);
         finish(completionStage2);
 
-        Consumer<String> consumer = mock(Consumer.class);
         completionStage.acceptEither(completionStage2, consumer);
 
         verify(consumer, times(1)).accept(any(String.class));
@@ -116,7 +117,6 @@ public abstract class AbstractCompletionStageTest {
     public void acceptShouldWork() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
-        Consumer<String> consumer = mock(Consumer.class);
         completionStage.thenAccept(consumer);
 
         finish(completionStage);
@@ -204,11 +204,10 @@ public abstract class AbstractCompletionStageTest {
     public void whenCompleteShouldAcceptUnwrappedException() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
-        BiConsumer<String, Throwable> consumer = mock(BiConsumer.class);
-        completionStage.whenComplete(consumer);
+        completionStage.whenComplete(biConsumer);
 
         finish(completionStage);
-        verify(consumer, times(1)).accept(null, EXCEPTION);
+        verify(biConsumer, times(1)).accept(null, EXCEPTION);
     }
 
     @Test
@@ -226,7 +225,6 @@ public abstract class AbstractCompletionStageTest {
     public void exceptionallyShouldTranslateExceptionToAValue() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
-        Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, String> function = mock(Function.class);
         when(function.apply(EXCEPTION)).thenReturn(VALUE);
         completionStage.exceptionally(function).thenAccept(consumer);
@@ -241,7 +239,6 @@ public abstract class AbstractCompletionStageTest {
     public void exceptionallyShouldPassValue() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
-        Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, String> function = mock(Function.class);
         when(function.apply(EXCEPTION)).thenReturn(VALUE);
         completionStage.exceptionally(function).thenAccept(consumer);
@@ -272,7 +269,6 @@ public abstract class AbstractCompletionStageTest {
     public void ifExceptionallyFunctionFailsItShouldBePassedFurther() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
-        Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, String> errorHandler = mock(Function.class);
         when(errorHandler.apply(EXCEPTION)).thenReturn(VALUE);
         completionStage.exceptionally(e -> {
@@ -292,15 +288,13 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage2);
 
         BiFunction<String, String, Integer> combiner = mock(BiFunction.class);
-        Consumer<Integer> consumer = mock(Consumer.class);
-
         when(combiner.apply(VALUE, VALUE2)).thenReturn(5);
 
-        completionStage1.thenCombine(completionStage2, combiner).thenAccept(consumer);
+        completionStage1.thenCombine(completionStage2, combiner).thenAccept(intConsumer);
         finish(completionStage1);
 
         verify(combiner).apply(VALUE, VALUE2);
-        verify(consumer).accept(5);
+        verify(intConsumer).accept(5);
     }
 
     @Test
@@ -310,15 +304,14 @@ public abstract class AbstractCompletionStageTest {
         finish(completionStage2);
 
         BiFunction<String, String, Integer> combiner = mock(BiFunction.class);
-        Consumer<Integer> consumer = mock(Consumer.class);
 
         when(combiner.apply(VALUE2, VALUE)).thenReturn(5);
 
-        completionStage2.thenCombine(completionStage1, combiner).thenAccept(consumer);
+        completionStage2.thenCombine(completionStage1, combiner).thenAccept(intConsumer);
         finish(completionStage1);
 
         verify(combiner).apply(VALUE2, VALUE);
-        verify(consumer).accept(5);
+        verify(intConsumer).accept(5);
     }
 
     @Test
@@ -433,7 +426,6 @@ public abstract class AbstractCompletionStageTest {
     public void exceptionFromThenAcceptShouldBePassedToTheNextPhase() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
-        Consumer<String> consumer = mock(Consumer.class);
         Function<Throwable, Void> errorHandler = mock(Function.class);
         when(errorHandler.apply(EXCEPTION)).thenReturn(null);
         doThrow(EXCEPTION).when(consumer).accept(VALUE);
@@ -449,12 +441,11 @@ public abstract class AbstractCompletionStageTest {
     public void thenApplyShouldTransformTheValue() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
-        Consumer<Integer> consumer = mock(Consumer.class);
-        completionStage.thenApply(String::length).thenApply(i -> i * 2).thenAccept(consumer);
+        completionStage.thenApply(String::length).thenApply(i -> i * 2).thenAccept(intConsumer);
 
         finish(completionStage);
 
-        verify(consumer).accept(8);
+        verify(intConsumer).accept(8);
     }
 
     @Test
@@ -474,13 +465,12 @@ public abstract class AbstractCompletionStageTest {
     public void shouldNotFailOnException() {
         CompletionStage<String> completionStage = createCompletionStage(EXCEPTION);
 
-        Consumer<Integer> consumer = mock(Consumer.class);
         Function<Throwable, Void> errorFunction = mock(Function.class);
-        completionStage.thenApply(String::length).thenApply(i -> i * 2).thenAccept(consumer).exceptionally(errorFunction);
+        completionStage.thenApply(String::length).thenApply(i -> i * 2).thenAccept(intConsumer).exceptionally(errorFunction);
 
         finish(completionStage);
 
-        verifyZeroInteractions(consumer);
+        verifyZeroInteractions(intConsumer);
         verify(errorFunction, times(1)).apply(isACompletionException());
     }
 
@@ -548,13 +538,12 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
 
         BiConsumer<Integer, Throwable> consumer = mock(BiConsumer.class);
-        Consumer<Integer> consumer2 = mock(Consumer.class);
-        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer).thenAccept(consumer2);
+        completionStage.thenApply(String::length).thenApply(i -> i * 2).whenComplete(consumer).thenAccept(intConsumer);
 
         finish(completionStage);
 
         verify(consumer).accept(8, null);
-        verify(consumer2).accept(8);
+        verify(intConsumer).accept(8);
     }
 
     @Test
@@ -618,8 +607,6 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
 
-
-        Consumer<String> consumer = mock(Consumer.class);
         completionStage.thenCompose(r -> completionStage2).thenAccept(consumer);
 
         finish(completionStage);
@@ -648,15 +635,13 @@ public abstract class AbstractCompletionStageTest {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
 
-
-        BiConsumer<String, Throwable> consumer = mock(BiConsumer.class);
-        completionStage.thenCompose(r -> completionStage2).whenComplete(consumer);
+      completionStage.thenCompose(r -> completionStage2).whenComplete(biConsumer);
 
         finish(completionStage);
         finish(completionStage2);
 
 
-        verify(consumer).accept(isNull(String.class), isACompletionException());
+        verify(biConsumer).accept(isNull(String.class), isACompletionException());
     }
 
 
