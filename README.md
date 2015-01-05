@@ -5,6 +5,10 @@ An alternative implementation to Java 8 [CompletableFuture](https://docs.oracle.
 Its main focus is to simplify support of [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) in
 other libraries.
 
+The objective is to provide a simple, easy to understand alternative. You can check the
+[code](https://github.com/lukas-krecan/completion-stage/blob/master/src/main/java/net/javacrumbs/completionstage/SimpleCompletionStage.java)
+and see if it's successful.
+
 # How to use
 
 Add Maven dependency
@@ -50,7 +54,7 @@ to CompletionStage you can
 # Disclaimer
 
 It's quite fresh code as you can tell from the version number. So the API may change and there may be some bugs. That being said, it
-has quite good code coverage so I do not expect any obvious bugs.
+has quite good code coverage so I do not expect any obvious bugs. If you find one, please let me know.
 
 For converting between different kinds of Java futures, please check [future-converter](https://github.com/lukas-krecan/future-converter)
 it's bit more mature.
