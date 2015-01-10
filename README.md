@@ -16,7 +16,7 @@ Add Maven dependency
     <dependency>
         <groupId>net.javacrumbs.completion-stage</groupId>
         <artifactId>completion-stage</artifactId>
-        <version>0.0.3</version>
+        <version>0.0.4</version>
     </dependency>
 
 And enjoy
@@ -32,6 +32,10 @@ And enjoy
 
     // once the result is ready, let us know
     completionStage.complete(value);
+
+    ...
+    // in case of exception
+    completionStage.completeExceptionally(exception);
 
 For example, to convert Spring [ListenableFuture](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/concurrent/ListenableFuture.html)
 to CompletionStage you can
@@ -49,6 +53,10 @@ to CompletionStage you can
             completionStage.completeExceptionally(t);
         }
     });
+
+# Design
+The best way to understand how it works is to check the [code](https://github.com/lukas-krecan/completion-stage/blob/master/src/main/java/net/javacrumbs/completionstage/SimpleCompletionStage.java).
+I have written two articles describing design decisions behind the implementation you can read it [here](http://java.dzone.com/articles/implementing-java-8) and [here](http://java.dzone.com/articles/implementing-java-8-0).
 
 
 # Disclaimer

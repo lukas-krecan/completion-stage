@@ -1,3 +1,6 @@
+## 0.0.4
+* Small optimizations
+
 ## 0.0.3
 * thenComposeAsync error handling fixed
 * thenCombineAsync uses correct executor
