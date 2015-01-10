@@ -125,13 +125,25 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
             CompletionStage<? extends T> other,
             Function<? super T, U> fn,
             Executor executor) {
-        SimpleCompletionStage<T> nextStage = newSimpleCompletionStage();
+        return doApplyToEitherAsync(this, other, fn, executor);
+    }
+
+    /**
+     * This method exists just to reconcile generics when called from {@link #runAfterEitherAsync}
+     * which has unexpected type of parameter "other". The alternative is to ignore compiler warning.
+     */
+    private <R, U> CompletionStage<U> doApplyToEitherAsync(
+            CompletionStage<? extends R> first,
+            CompletionStage<? extends R> second,
+            Function<? super R, U> fn,
+            Executor executor) {
+        SimpleCompletionStage<R> nextStage = newSimpleCompletionStage();
 
         // only the first result is accepted by completion stage,
         // the other one is ignored
-        BiConsumer<T, Throwable> action = nextStage.completeHandler();
-        this.whenComplete(action);
-        other.whenComplete(action);
+        BiConsumer<R, Throwable> action = nextStage.completeHandler();
+        first.whenComplete(action);
+        second.whenComplete(action);
 
         return nextStage.thenApplyAsync(fn, executor);
     }
@@ -142,9 +154,8 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
     }
 
     @Override
-    @SuppressWarnings("unchecked") //nasty
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return applyToEitherAsync((CompletionStage<T>) other, convertRunnableToFunction(action), executor);
+        return doApplyToEitherAsync(this, other, convertRunnableToFunction(action), executor);
     }
 
     @Override
@@ -235,7 +246,7 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
         };
     }
 
-    private Function<T, Void> convertRunnableToFunction(Runnable action) {
+    private <R> Function<R, Void> convertRunnableToFunction(Runnable action) {
         return result -> {
             action.run();
             return null;
@@ -258,6 +269,7 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
 
     /**
      * Handler that can be used in whenComplete method.
+     *
      * @return BiConsumer that passes values to this CompletionStage.
      */
     private BiConsumer<T, Throwable> completeHandler() {
@@ -281,6 +293,7 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
 
     /**
      * Wraps exception to a {@link java.util.concurrent.CompletionException} if needed.
+     *
      * @param e exception to be wrapped
      * @return CompletionException
      */
