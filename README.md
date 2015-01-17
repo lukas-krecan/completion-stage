@@ -7,7 +7,7 @@ other libraries.
 
 The objective is to provide a simple, easy to understand alternative. You can check the
 [code](https://github.com/lukas-krecan/completion-stage/blob/master/src/main/java/net/javacrumbs/completionstage/SimpleCompletionStage.java)
-and see if it's successful.
+and see for yourself.
 
 # How to use
 
