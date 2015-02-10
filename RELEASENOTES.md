@@ -1,3 +1,6 @@
+## 0.0.5
+* Added factory methods to CompletionStageFactory
+
 ## 0.0.4
 * Small optimizations
 

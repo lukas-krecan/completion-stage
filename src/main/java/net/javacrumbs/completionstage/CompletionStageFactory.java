@@ -42,36 +42,78 @@ public class CompletionStageFactory {
     public <T> CompletableCompletionStage<T> createCompletionStage() {
         return new SimpleCompletionStage<>(defaultAsyncExecutor);
     }
-    
-    public final <T> CompletionStage<T> completedFuture(T value) {
+
+    /**
+     * Returns a new CompletionStage that is already completed with
+     * the given value.
+     *
+     * @param value the value
+     * @param <T> the type of the value
+     * @return the completed CompletionStage
+     */
+    public final <T> CompletionStage<T> completedStage(T value) {
         CompletableCompletionStage<T> result = createCompletionStage();
         result.complete(value);
         return result;
     }
 
+    /**
+     * Returns a new CompletionStage that is asynchronously completed
+     * by a task running in the defaultAsyncExecutor with
+     * the value obtained by calling the given Supplier.
+     *
+     * @param supplier a function returning the value to be used
+     * to complete the returned CompletionStage
+     * @param <U> the function's return type
+     * @return the new CompletionStage
+     */
     public final <U> CompletionStage<U> supplyAsync(Supplier<U> supplier) {
-        Objects.requireNonNull(supplier, "supplier");
-
-        return completedFuture(null).thenApplyAsync((ignored) -> supplier.get());
+        return supplyAsync(supplier, defaultAsyncExecutor);
     }
 
+    /**
+     * Returns a new CompletionStage that is asynchronously completed
+     * by a task running in the given executor with the value obtained
+     * by calling the given Supplier.
+     *
+     * @param supplier a function returning the value to be used
+     * to complete the returned CompletionStage
+     * @param executor the executor to use for asynchronous execution
+     * @param <U> the function's return type
+     * @return the new CompletionStage
+     */
     public final <U> CompletionStage<U> supplyAsync(Supplier<U> supplier, Executor executor) {
-        Objects.requireNonNull(supplier, "supplier");
-        Objects.requireNonNull(executor, "executor");
-
-        return completedFuture(null).thenApplyAsync((ignored) -> supplier.get(), executor);
+        return SimpleCompletionStage.supplyAsync(supplier, executor);
     }
 
+    /**
+     * Returns a new CompletionStage that is asynchronously completed
+     * by a task running in the defaultAsyncExecutor after
+     * it runs the given action.
+     *
+     * @param runnable the action to run before completing the
+     * returned CompletionStage
+     * @return the new CompletionStage
+     */
     public final CompletionStage<Void> runAsync(Runnable runnable) {
-        Objects.requireNonNull(runnable, "runnable");
-
-        return completedFuture(null).thenRunAsync(runnable);
+        return runAsync(runnable, defaultAsyncExecutor);
     }
 
+    /**
+     * Returns a new CompletionStage that is asynchronously completed
+     * by a task running in the given executor after it runs the given
+     * action.
+     *
+     * @param runnable the action to run before completing the
+     * returned CompletionStage
+     * @param executor the executor to use for asynchronous execution
+     * @return the new CompletionStage
+     */
     public final CompletionStage<Void> runAsync(Runnable runnable, Executor executor) {
-        Objects.requireNonNull(runnable, "runnable");
-        Objects.requireNonNull(executor, "executor");
-
-        return completedFuture(null).thenRunAsync(runnable, executor);
+        Objects.requireNonNull(runnable, "runnable must not be null");
+        return SimpleCompletionStage.supplyAsync(() -> {
+            runnable.run();
+            return null;
+        }, executor);
     }
 }

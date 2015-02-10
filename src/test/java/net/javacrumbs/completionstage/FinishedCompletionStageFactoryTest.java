@@ -22,9 +22,7 @@ public class FinishedCompletionStageFactoryTest extends AbstractCompletionStageT
 
     @Override
     protected CompletionStage<String> createCompletionStage(String value) {
-        CompletableCompletionStage<String> completionStage = factory.createCompletionStage();
-        completionStage.complete(value);
-        return completionStage;
+        return factory.completedStage(value);
     }
 
     @Override
