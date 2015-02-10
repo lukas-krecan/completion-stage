@@ -15,7 +15,10 @@
  */
 package net.javacrumbs.completionstage;
 
+import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 /**
  * Factory for {@link java.util.concurrent.CompletionStage} implementation.
@@ -38,5 +41,37 @@ public class CompletionStageFactory {
      */
     public <T> CompletableCompletionStage<T> createCompletionStage() {
         return new SimpleCompletionStage<>(defaultAsyncExecutor);
+    }
+    
+    public final <T> CompletionStage<T> completedFuture(T value) {
+        CompletableCompletionStage<T> result = createCompletionStage();
+        result.complete(value);
+        return result;
+    }
+
+    public final <U> CompletionStage<U> supplyAsync(Supplier<U> supplier) {
+        Objects.requireNonNull(supplier, "supplier");
+
+        return completedFuture(null).thenApplyAsync((ignored) -> supplier.get());
+    }
+
+    public final <U> CompletionStage<U> supplyAsync(Supplier<U> supplier, Executor executor) {
+        Objects.requireNonNull(supplier, "supplier");
+        Objects.requireNonNull(executor, "executor");
+
+        return completedFuture(null).thenApplyAsync((ignored) -> supplier.get(), executor);
+    }
+
+    public final CompletionStage<Void> runAsync(Runnable runnable) {
+        Objects.requireNonNull(runnable, "runnable");
+
+        return completedFuture(null).thenRunAsync(runnable);
+    }
+
+    public final CompletionStage<Void> runAsync(Runnable runnable, Executor executor) {
+        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(executor, "executor");
+
+        return completedFuture(null).thenRunAsync(runnable, executor);
     }
 }
