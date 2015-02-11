@@ -309,24 +309,4 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
     private void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         callbackRegistry.addCallbacks(successCallback, failureCallback, executor);
     }
-
-    /**
-     * Returns a new CompletionStage that is asynchronously completed
-     * by a task running in the given executor with the value obtained
-     * by calling the given Supplier.
-     *
-     * @param supplier a function returning the value to be used
-     *                 to complete the returned CompletionStage
-     * @param executor the executor to use for asynchronous execution
-     * @param <U>      the function's return type
-     * @return the new CompletionStage
-     */
-    static <U> CompletionStage<U> supplyAsync(Supplier<U> supplier, Executor executor) {
-        Objects.requireNonNull(supplier, "supplier must not be null");
-        Objects.requireNonNull(executor, "executor must not be null");
-        SimpleCompletionStage<U> completionStage = new SimpleCompletionStage<>(executor);
-        executor.execute(() -> completionStage.acceptResult(supplier));
-        return completionStage;
-    }
-
 }

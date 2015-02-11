@@ -74,7 +74,8 @@ public class CompletionStageFactory {
     /**
      * Returns a new CompletionStage that is asynchronously completed
      * by a task running in the given executor with the value obtained
-     * by calling the given Supplier.
+     * by calling the given Supplier. Subsequent completion stages will
+     * use defaultAsyncExecutor as their default executor.
      *
      * @param supplier a function returning the value to be used
      * to complete the returned CompletionStage
@@ -83,7 +84,8 @@ public class CompletionStageFactory {
      * @return the new CompletionStage
      */
     public final <U> CompletionStage<U> supplyAsync(Supplier<U> supplier, Executor executor) {
-        return SimpleCompletionStage.supplyAsync(supplier, executor);
+        Objects.requireNonNull(supplier, "supplier must not be null");
+        return completedStage(null).thenApplyAsync((ignored) -> supplier.get(), executor);
     }
 
     /**
@@ -102,7 +104,8 @@ public class CompletionStageFactory {
     /**
      * Returns a new CompletionStage that is asynchronously completed
      * by a task running in the given executor after it runs the given
-     * action.
+     * action. Subsequent completion stages will
+     * use defaultAsyncExecutor as their default executor.
      *
      * @param runnable the action to run before completing the
      * returned CompletionStage
@@ -111,9 +114,6 @@ public class CompletionStageFactory {
      */
     public final CompletionStage<Void> runAsync(Runnable runnable, Executor executor) {
         Objects.requireNonNull(runnable, "runnable must not be null");
-        return SimpleCompletionStage.supplyAsync(() -> {
-            runnable.run();
-            return null;
-        }, executor);
+        return completedStage(null).thenRunAsync(runnable, executor);
     }
 }

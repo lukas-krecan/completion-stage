@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -45,6 +47,9 @@ public class CompletionStageFactoryTest {
 
     @Mock
     private Runnable runnable;
+
+    @Mock
+    private Consumer<String> consumer;
 
     @Captor
     private ArgumentCaptor<Runnable> runnableCaptor;
@@ -101,6 +106,10 @@ public class CompletionStageFactoryTest {
 
         CompletionStage<String> stage = factory.supplyAsync(supplier, alternativeExecutor);
         doSupplyAsyncTest(alternativeExecutor, stage, supplier, TEST_VALUE);
+
+        // subsequent async method should use default executor again.
+        stage.thenAcceptAsync(consumer);
+        verify(defaultExecutor).execute(any(Runnable.class));
     }
 
     @Test
