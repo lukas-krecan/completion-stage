@@ -16,7 +16,7 @@ Add Maven dependency
     <dependency>
         <groupId>net.javacrumbs.completion-stage</groupId>
         <artifactId>completion-stage</artifactId>
-        <version>0.0.4</version>
+        <version>0.0.5</version>
     </dependency>
 
 And enjoy
@@ -36,6 +36,15 @@ And enjoy
     ...
     // in case of exception
     completionStage.completeExceptionally(exception);
+
+    ...
+    // create already completed stage
+    CompletionStage<String> completed = factory.completedStage(value);
+
+    ...
+    // asynchronously execute supplier
+    CompletionStage<String> asyncStage = factory.supplyAsync(supplier);
+
 
 For example, to convert Spring [ListenableFuture](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/concurrent/ListenableFuture.html)
 to CompletionStage you can
