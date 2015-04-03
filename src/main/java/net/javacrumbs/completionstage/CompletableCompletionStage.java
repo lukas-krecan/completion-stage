@@ -16,6 +16,8 @@
 package net.javacrumbs.completionstage;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Completion stage you can complete. On  top of standard {@link java.util.concurrent.CompletionStage} methods
@@ -23,7 +25,7 @@ import java.util.concurrent.CompletionStage;
  * {@link net.javacrumbs.completionstage.CompletableCompletionStage#completeExceptionally(Throwable)}.
  *
  */
-public interface CompletableCompletionStage<T> extends CompletionStage<T> {
+public interface CompletableCompletionStage<T> extends CompletionStage<T>, Consumer<T>, BiConsumer<T, Throwable> {
 
     /**
      * Call this if you want to start processing of the result..
@@ -42,4 +44,16 @@ public interface CompletableCompletionStage<T> extends CompletionStage<T> {
      * to transition to a completed state, else {@code false}
      */
     public boolean completeExceptionally(Throwable ex);
+
+    public default void accept(T result) {
+        complete(result);
+    }
+
+    public default void accept(T result, Throwable throwable) {
+        if (throwable == null) {
+            complete(result);
+        } else {
+            completeExceptionally(throwable);
+        }
+    }
 }
