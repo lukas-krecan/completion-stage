@@ -16,6 +16,8 @@
 package net.javacrumbs.completionstage;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Completion stage you can complete. On  top of standard {@link java.util.concurrent.CompletionStage} methods
@@ -23,10 +25,10 @@ import java.util.concurrent.CompletionStage;
  * {@link net.javacrumbs.completionstage.CompletableCompletionStage#completeExceptionally(Throwable)}.
  *
  */
-public interface CompletableCompletionStage<T> extends CompletionStage<T> {
+public interface CompletableCompletionStage<T> extends CompletionStage<T>, Consumer<T>, BiConsumer<T, Throwable> {
 
     /**
-     * Call this if you want to start processing of the result..
+     * Call this if you want to start processing of the result.
      *
      * @param result the result value.
      * @return {@code true} if this invocation caused this CompletionStage
@@ -42,4 +44,29 @@ public interface CompletableCompletionStage<T> extends CompletionStage<T> {
      * to transition to a completed state, else {@code false}
      */
     public boolean completeExceptionally(Throwable ex);
+
+    /**
+     * Accepts a value and sets this CompletionStage as success with such value
+     * if it hasn't yet been completed.
+     * @param result the success value. May be null.
+     */
+    public default void accept(T result) {
+        complete(result);
+    }
+
+    /**
+     * Accepts a value and a throwable to complete this CompletionStage
+     * if it hasn't been set.
+     * @param result the success value. May be null.
+     *               Completes this computation as a success with this value only if throwable is null.
+     * @param throwable the failure value.
+     *                  If not null, completes this computation as a failure with this value.
+     */
+    public default void accept(T result, Throwable throwable) {
+        if (throwable == null) {
+            complete(result);
+        } else {
+            completeExceptionally(throwable);
+        }
+    }
 }
