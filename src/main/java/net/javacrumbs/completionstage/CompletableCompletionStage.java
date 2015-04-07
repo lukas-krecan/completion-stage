@@ -21,7 +21,6 @@ import java.util.concurrent.CompletionStage;
  * Completion stage you can complete. On  top of standard {@link java.util.concurrent.CompletionStage} methods
  * provides {@link net.javacrumbs.completionstage.CompletableCompletionStage#complete(Object)} and
  * {@link net.javacrumbs.completionstage.CompletableCompletionStage#completeExceptionally(Throwable)}.
- *
  */
 public interface CompletableCompletionStage<T> extends CompletionStage<T> {
 
@@ -42,4 +41,33 @@ public interface CompletableCompletionStage<T> extends CompletionStage<T> {
      * to transition to a completed state, else {@code false}
      */
     public boolean completeExceptionally(Throwable ex);
+
+    /**
+     * Sets this CompletionStage as success with provided value
+     * if it hasn't been already completed. Same as {@link #complete(T)}, the only difference
+     * is the return type which makes this method more suitable to be used as method reference.
+     *
+     * @param result the success value. May be null.
+     */
+    public default void doComplete(T result) {
+        complete(result);
+    }
+
+    /**
+     * Accepts a value and a throwable to complete this CompletionStage
+     * if it hasn't been already completed. If throwable is null, completes normally, if
+     * throwable is not null, completes exceptionally.
+     *
+     * @param result    the success value. May be null.
+     *                  Completes this computation as a success with this value only if throwable is null.
+     * @param throwable the failure value.
+     *                  If not null, completes this computation as a failure with this value.
+     */
+    public default void doComplete(T result, Throwable throwable) {
+        if (throwable == null) {
+            complete(result);
+        } else {
+            completeExceptionally(throwable);
+        }
+    }
 }
