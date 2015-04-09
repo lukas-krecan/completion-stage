@@ -44,7 +44,7 @@ public interface CompletableCompletionStage<T> extends CompletionStage<T> {
 
     /**
      * Sets this CompletionStage as success with provided value
-     * if it hasn't been already completed. Same as {@link #complete(T)}, the only difference
+     * if it hasn't been already completed. Same as {@link #complete(Object) complete(T)}, the only difference
      * is the return type which makes this method more suitable to be used as method reference.
      *
      * @param result the success value. May be null.
