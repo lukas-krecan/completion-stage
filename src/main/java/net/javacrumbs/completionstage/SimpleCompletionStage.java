@@ -15,7 +15,6 @@
  */
 package net.javacrumbs.completionstage;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
