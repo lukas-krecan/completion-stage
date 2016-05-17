@@ -56,7 +56,7 @@ final class CallbackRegistry<T> {
     	// Here and below no sync is necessary
     	// while we are _always_ in immutable FinalState
     	if (oldState != state.get()) {
-    		oldState.onSuccess(result);
+    		oldState.notifier().onSuccess(result);
     		return true;
     	}
     	return false;
@@ -73,7 +73,7 @@ final class CallbackRegistry<T> {
     	// Here and below no sync is necessary
     	// while we are _always_ in immutable FinalState
     	if (oldState != state.get()) {
-    		oldState.onFailure(failure);
+    		oldState.notifier().onFailure(failure);
     		return true;
     	}
     	return false;
@@ -94,8 +94,9 @@ final class CallbackRegistry<T> {
             return new FailureState<>(failure);
         }
         
-        protected void onSuccess(S result) {}
-        protected void onFailure(Throwable result) {}
+        protected Notifier<S> notifier() {
+        	return NotifierImpl.empty();
+        }
     }
 
     /**
@@ -132,13 +133,8 @@ final class CallbackRegistry<T> {
         }
 
         @Override
-        protected void onSuccess(S result) {
-        	notifier.onSuccess(result);
-        }
-
-        @Override
-        protected void onFailure(Throwable failure) {
-        	notifier.onFailure(failure);
+        protected Notifier<S> notifier() {
+        	return notifier;
         }
     }
 
@@ -154,7 +150,6 @@ final class CallbackRegistry<T> {
 			// Do not obtrude exception
 			return this;
 		}
-		
 
         protected static <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
             executor.execute(() -> callback.accept(value));
@@ -198,9 +193,15 @@ final class CallbackRegistry<T> {
     private static interface Notifier<T> {
     	void onSuccess(T result);
     	void onFailure(Throwable failure);
+    	
     }
     
     private static final class NotifierImpl<T> implements Notifier<T> {
+    	private static final Notifier<Object> EMPTY = new Notifier<Object>() {
+        	public void onSuccess(Object result) {}
+        	public void onFailure(Throwable failure) {}
+    	};
+    	
     	final private Consumer<? super T> successCallback;
     	final private Consumer<Throwable> failureCallback;
     	final private Executor executor;
@@ -222,6 +223,12 @@ final class CallbackRegistry<T> {
     	final private <S> void execute(Consumer<? super S> consumer, S value) {
     		executor.execute( () -> consumer.accept(value) );
     	}
+    	
+    	@SuppressWarnings("unchecked")
+    	static <T> Notifier<T> empty() {
+    		return (Notifier<T>)EMPTY;
+    	}
+
     }
     
     // Modeled after AWTEventMulticaster
