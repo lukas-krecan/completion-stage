@@ -40,7 +40,7 @@ public class CompletionStageFactory {
      * @return CompletionStage
      */
     public <T> CompletableCompletionStage<T> createCompletionStage() {
-        return new SimpleCompletionStage<>(defaultAsyncExecutor);
+        return new SimpleCompletionStage<>(defaultAsyncExecutor, this::createCompletionStage);
     }
 
     /**

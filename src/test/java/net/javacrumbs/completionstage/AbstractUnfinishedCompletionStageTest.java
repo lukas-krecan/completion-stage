@@ -40,7 +40,8 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage2);
 
-        Consumer<String> consumer = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
+		Consumer<String> consumer = mock(Consumer.class);
         completionStage.acceptEither(completionStage2, consumer);
 
         verify(consumer, times(1)).accept(VALUE2);
@@ -55,8 +56,10 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
         finish(completionStage2);
 
-        Consumer<String> consumer = mock(Consumer.class);
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        @SuppressWarnings("unchecked")
+		Consumer<String> consumer = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
+		Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
@@ -71,8 +74,10 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage);
 
-        Consumer<String> consumer = mock(Consumer.class);
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        @SuppressWarnings("unchecked")
+		Consumer<String> consumer = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
+		Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
@@ -91,7 +96,8 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        @SuppressWarnings("unchecked")
+		Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
@@ -108,7 +114,8 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        @SuppressWarnings("unchecked")
+		Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
