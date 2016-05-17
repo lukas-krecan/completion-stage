@@ -37,8 +37,8 @@ public class UnfinishedCompletableFutureTest extends AbstractUnfinishedCompletio
 
 
     @Override
-    protected void finish(CompletionStage c) {
-        ((DelayedCompletableFuture) c).executeDelayedAction();
+    protected void finish(CompletionStage<String> c) {
+        ((DelayedCompletableFuture<String>) c).executeDelayedAction();
     }
 
     private static class DelayedCompletableFuture<T> extends CompletableFuture<T> {
