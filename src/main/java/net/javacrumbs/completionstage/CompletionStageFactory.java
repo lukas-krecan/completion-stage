@@ -24,7 +24,7 @@ import java.util.function.Supplier;
  * Factory for {@link java.util.concurrent.CompletionStage} implementation.
  */
 public class CompletionStageFactory {
-    private final Executor defaultAsyncExecutor;
+    protected final Executor defaultAsyncExecutor;
 
     /**
      * Creates factory.

@@ -327,7 +327,7 @@ class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements Comp
         }
     }
 
-    private void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+    protected void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         callbackRegistry.addCallbacks(successCallback, failureCallback, executor);
     }
 }
