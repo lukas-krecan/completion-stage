@@ -30,7 +30,7 @@ import java.util.function.Supplier;
  * {@link java.util.concurrent.CompletionStage} implementation.
  * Keeps the result or callbacks in {@link net.javacrumbs.completionstage.CallbackRegistry}
  */
-class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements CompletableCompletionStage<T> {
+public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements CompletableCompletionStage<T> {
 
     private final CallbackRegistry<T> callbackRegistry = new CallbackRegistry<>();
     private final Supplier<? extends CompletableCompletionStage<?>> completionStageFactory;
