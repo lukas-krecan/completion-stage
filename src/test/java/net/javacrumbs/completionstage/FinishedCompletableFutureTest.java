@@ -44,10 +44,4 @@ public class FinishedCompletableFutureTest extends AbstractCompletionStageTest {
     protected void finish(CompletionStage<String> completionStage) {
 
     }
-
-    @Override
-    @Ignore
-    public void thenComposePassesFailureFromTheOtherCompletionStage() {
-        // http://stackoverflow.com/questions/27747976/why-java-8-completablefuture-thencompose-generates-different-exception-depending
-    }
 }
