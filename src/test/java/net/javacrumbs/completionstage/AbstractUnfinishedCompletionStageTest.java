@@ -40,6 +40,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage2);
 
+        @SuppressWarnings("unchecked")
         Consumer<String> consumer = mock(Consumer.class);
         completionStage.acceptEither(completionStage2, consumer);
 
@@ -55,7 +56,9 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
         finish(completionStage2);
 
+        @SuppressWarnings("unchecked")
         Consumer<String> consumer = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
@@ -71,7 +74,9 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage);
 
+        @SuppressWarnings("unchecked")
         Consumer<String> consumer = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
@@ -91,6 +96,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
+        @SuppressWarnings("unchecked")
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
@@ -108,6 +114,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
+        @SuppressWarnings("unchecked")
         Function<Throwable, Void> errorHandler = mock(Function.class);
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
