@@ -32,7 +32,7 @@ final class CallbackRegistry<T> {
     /**
      * Adds the given callbacks to this registry.
      */
-    public void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+    void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         Objects.requireNonNull(successCallback, "'successCallback' must not be null");
         Objects.requireNonNull(failureCallback, "'failureCallback' must not be null");
         Objects.requireNonNull(executor, "'executor' must not be null");
@@ -51,7 +51,7 @@ final class CallbackRegistry<T> {
      * @param result the result value
      * @return true if this result will be used (first result registered)
      */
-    public boolean success(T result) {
+    boolean success(T result) {
         final State<T> oldState = state.getAndUpdate(s -> s.success(result));
         // Here and below no sync is necessary
         // while we are _always_ in immutable FinalState
@@ -68,7 +68,7 @@ final class CallbackRegistry<T> {
      * @param failure the exception
      * @return true if this result will be used (first result registered)
      */
-    public boolean failure(Throwable failure) {
+    boolean failure(Throwable failure) {
         final State<T> oldState = state.getAndUpdate(s -> s.failure(failure));
         // Here and below no sync is necessary
         // while we are _always_ in immutable FinalState
@@ -103,7 +103,7 @@ final class CallbackRegistry<T> {
      * Result is not known yet and no callbacks registered. Using shared instance so we do not allocate instance where
      * it may not be needed.
      */
-    static class InitialState<S> extends State<S> {
+    private static class InitialState<S> extends State<S> {
         private static final InitialState<Object> instance = new InitialState<>();
 
         @Override
@@ -120,7 +120,7 @@ final class CallbackRegistry<T> {
     /**
      * Result is not known yet.
      */
-    static class IntermediateState<S> extends State<S> {
+    private static class IntermediateState<S> extends State<S> {
         final private Notifier<S> notifier;
 
         IntermediateState(final Notifier<S> notifier) {
@@ -129,7 +129,7 @@ final class CallbackRegistry<T> {
 
         @Override
         protected State<S> addCallbacks(Consumer<? super S> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
-            return new IntermediateState<S>( NotifierMulticaster.add(notifier, new NotifierImpl<>(successCallback, failureCallback, executor)) );
+            return new IntermediateState<>(NotifierMulticaster.add(notifier, new NotifierImpl<>(successCallback, failureCallback, executor)));
         }
 
         @Override
@@ -138,7 +138,7 @@ final class CallbackRegistry<T> {
         }
     }
 
-    static abstract class FinalState<S> extends State<S> {
+    private static abstract class FinalState<S> extends State<S> {
         @Override
         protected final State<S> success(S result) {
             // Do not obtrude result
@@ -151,7 +151,7 @@ final class CallbackRegistry<T> {
             return this;
         }
 
-        protected static <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
+        static <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
             executor.execute(() -> callback.accept(value));
         }
     }
@@ -159,7 +159,7 @@ final class CallbackRegistry<T> {
     /**
      * Holds the result.
      */
-    static final class SuccessState<S> extends FinalState<S> {
+    private static final class SuccessState<S> extends FinalState<S> {
         private final S result;
 
         SuccessState(S result) {
@@ -176,7 +176,7 @@ final class CallbackRegistry<T> {
     /**
      * Holds the failure.
      */
-    static final class FailureState<S> extends FinalState<S> {
+    private static final class FailureState<S> extends FinalState<S> {
         private final Throwable failure;
 
         FailureState(Throwable failure) {
@@ -190,13 +190,16 @@ final class CallbackRegistry<T> {
         }
     }
 
-    static interface Notifier<T> {
+    private interface Notifier<T> {
         void onSuccess(T result);
         void onFailure(Throwable failure);
-
     }
 
-    static final class NotifierImpl<T> implements Notifier<T> {
+    /**
+     * Container for success, fallback callbacks and executor.
+     * @param <T>
+     */
+    private static final class NotifierImpl<T> implements Notifier<T> {
         private static final Notifier<Object> EMPTY = new Notifier<Object>() {
             public void onSuccess(Object result) {}
             public void onFailure(Throwable failure) {}
@@ -206,7 +209,7 @@ final class CallbackRegistry<T> {
         final private Consumer<Throwable> failureCallback;
         final private Executor executor;
 
-        public NotifierImpl(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+        NotifierImpl(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
             this.successCallback = successCallback;
             this.failureCallback = failureCallback;
             this.executor = executor;
@@ -220,7 +223,7 @@ final class CallbackRegistry<T> {
             execute(failureCallback, failure);
         }
 
-        final private <S> void execute(Consumer<? super S> consumer, S value) {
+        private <S> void execute(Consumer<? super S> consumer, S value) {
             executor.execute( () -> consumer.accept(value) );
         }
 
@@ -232,7 +235,7 @@ final class CallbackRegistry<T> {
     }
 
     // Modeled after AWTEventMulticaster
-    static final class NotifierMulticaster<T> implements Notifier<T> {
+    private static final class NotifierMulticaster<T> implements Notifier<T> {
         final private Notifier<T> a;
         final private Notifier<T> b;
         NotifierMulticaster(Notifier<T> a, Notifier<T> b) {
@@ -250,34 +253,10 @@ final class CallbackRegistry<T> {
             b.onFailure(failure);
         }
 
-        public static <T> Notifier<T> add(Notifier<T> a, Notifier<T> b) {   
+        static <T> Notifier<T> add(Notifier<T> a, Notifier<T> b) {
             return  (a == null)  ? b :
                 (b == null)  ? a : new NotifierMulticaster<>(a, b);
         }
-
-        public static <T> Notifier<T> remove(Notifier<T> list, Notifier<T> target) {
-            if ( list == target || list == null  )
-                return null;
-            else if( !(list instanceof NotifierMulticaster) )
-                return list;
-            else
-                return ((NotifierMulticaster<T>)list).remove( target );
-        }    	
-
-        private Notifier<T> remove(Notifier<T> target) {
-            if (target == a)  
-                return b;
-            if (target == b)  
-                return a;
-
-            Notifier<T> a2 = remove( a, target );
-            Notifier<T> b2 = remove( b, target );
-
-            return (a2 == a && b2 == b ) // it's not here
-                    ? this
-                    : add(a2, b2)
-            ;
-        }    	
     }
 
 }
