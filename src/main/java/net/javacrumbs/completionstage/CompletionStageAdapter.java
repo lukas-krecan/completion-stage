@@ -28,7 +28,7 @@ import java.util.function.Function;
  * @param <T>
  */
 abstract class CompletionStageAdapter<T> implements CompletionStage<T> {
-    protected static final Executor SAME_THREAD_EXECUTOR = new Executor() {
+    static final Executor SAME_THREAD_EXECUTOR = new Executor() {
         @Override
         public void execute(Runnable command) {
             command.run();
@@ -41,9 +41,9 @@ abstract class CompletionStageAdapter<T> implements CompletionStage<T> {
     /**
      * Default executor to be used for Async methods.
      */
-    protected final Executor defaultExecutor;
+    private final Executor defaultExecutor;
 
-    public CompletionStageAdapter(Executor defaultExecutor) {
+    CompletionStageAdapter(Executor defaultExecutor) {
         this.defaultExecutor = defaultExecutor;
     }
 
@@ -165,5 +165,9 @@ abstract class CompletionStageAdapter<T> implements CompletionStage<T> {
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn) {
         return handleAsync(fn, defaultExecutor);
+    }
+
+    protected final  Executor getDefaultExecutor() {
+        return defaultExecutor;
     }
 }

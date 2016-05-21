@@ -15,6 +15,8 @@
  */
 package net.javacrumbs.completionstage;
 
+import net.javacrumbs.completionstage.spi.CompletableCompletionStageFactory;
+
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -23,7 +25,7 @@ import java.util.function.Supplier;
 /**
  * Factory for {@link java.util.concurrent.CompletionStage} implementation.
  */
-public class CompletionStageFactory {
+public class CompletionStageFactory implements CompletableCompletionStageFactory {
     private final Executor defaultAsyncExecutor;
 
     /**
@@ -40,7 +42,7 @@ public class CompletionStageFactory {
      * @return CompletionStage
      */
     public <T> CompletableCompletionStage<T> createCompletionStage() {
-        return new SimpleCompletionStage<>(defaultAsyncExecutor);
+        return new SimpleCompletionStage<>(defaultAsyncExecutor, this);
     }
 
     /**
@@ -115,5 +117,9 @@ public class CompletionStageFactory {
     public final CompletionStage<Void> runAsync(Runnable runnable, Executor executor) {
         Objects.requireNonNull(runnable, "runnable must not be null");
         return completedStage(null).thenRunAsync(runnable, executor);
+    }
+
+    protected final Executor getDefaultAsyncExecutor() {
+        return defaultAsyncExecutor;
     }
 }

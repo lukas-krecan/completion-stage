@@ -40,7 +40,7 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage2);
 
-        Consumer<String> consumer = mock(Consumer.class);
+        Consumer<String> consumer = mockConsumer();
         completionStage.acceptEither(completionStage2, consumer);
 
         verify(consumer, times(1)).accept(VALUE2);
@@ -55,14 +55,20 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(EXCEPTION);
         finish(completionStage2);
 
-        Consumer<String> consumer = mock(Consumer.class);
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        Consumer<String> consumer = mockConsumer();
+
+        Function<Throwable, Void> errorHandler = mockFunction();
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
         finish(completionStage);
 
         verifyZeroInteractions(consumer);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Consumer<String> mockConsumer() {
+        return mock(Consumer.class);
     }
 
     @Test
@@ -71,8 +77,9 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage);
 
-        Consumer<String> consumer = mock(Consumer.class);
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+        Consumer<String> consumer = mockConsumer();
+
+        Function<Throwable, Void> errorHandler = mockFunction();
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
@@ -81,8 +88,13 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
         verifyZeroInteractions(consumer);
     }
 
+    @SuppressWarnings("unchecked")
+    private Function<Throwable, Void> mockFunction() {
+        return mock(Function.class);
+    }
+
     @Test
-    public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingFirsStage() {
+    public void acceptEitherPropagatesExceptionThrownByConsumerWhenProcessingFirstStage() {
         CompletionStage<String> completionStage = createCompletionStage(VALUE);
         CompletionStage<String> completionStage2 = createCompletionStage(VALUE2);
         finish(completionStage);
@@ -91,7 +103,8 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+
+        Function<Throwable, Void> errorHandler = mockFunction();
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
@@ -108,7 +121,8 @@ public abstract class AbstractUnfinishedCompletionStageTest extends AbstractComp
             throw EXCEPTION;
         };
 
-        Function<Throwable, Void> errorHandler = mock(Function.class);
+
+        Function<Throwable, Void> errorHandler = mockFunction();
         completionStage.acceptEither(completionStage2, consumer).exceptionally(errorHandler);
 
         verify(errorHandler, times(1)).apply(any(CompletionException.class));
