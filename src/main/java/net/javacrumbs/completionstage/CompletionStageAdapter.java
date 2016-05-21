@@ -28,7 +28,7 @@ import java.util.function.Function;
  * @param <T>
  */
 abstract class CompletionStageAdapter<T> implements CompletionStage<T> {
-    static final Executor SAME_THREAD_EXECUTOR = new Executor() {
+    protected static final Executor SAME_THREAD_EXECUTOR = new Executor() {
         @Override
         public void execute(Runnable command) {
             command.run();
