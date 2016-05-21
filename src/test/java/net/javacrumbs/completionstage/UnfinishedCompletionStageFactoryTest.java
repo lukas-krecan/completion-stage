@@ -15,6 +15,8 @@
  */
 package net.javacrumbs.completionstage;
 
+import net.javacrumbs.completionstage.spi.CompletableCompletionStageFactory;
+
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -40,7 +42,7 @@ public class UnfinishedCompletionStageFactoryTest extends AbstractUnfinishedComp
         private final Consumer<DelayedSimpleCompletionStage> delayedAction;
 
         private DelayedSimpleCompletionStage(Consumer<DelayedSimpleCompletionStage> delayedAction, Executor defaultExecutor) {
-            super(defaultExecutor);
+            super(defaultExecutor, new CompletionStageFactory(defaultExecutor));
             this.delayedAction = delayedAction;
         }
 

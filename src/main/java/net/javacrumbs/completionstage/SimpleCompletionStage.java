@@ -15,7 +15,8 @@
  */
 package net.javacrumbs.completionstage;
 
-import java.util.Objects;
+import net.javacrumbs.completionstage.spi.CompletableCompletionStageFactory;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -27,22 +28,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * {@link java.util.concurrent.CompletionStage} implementation.
- * Keeps the result or callbacks in {@link net.javacrumbs.completionstage.CallbackRegistry}
+ * Please do not use this class directly, use {@link CompletionStageFactory} to create instances.
+ * {@link java.util.concurrent.CompletionStage} implementation that is built on top of standard executors.
  */
 public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implements CompletableCompletionStage<T> {
 
     private final CallbackRegistry<T> callbackRegistry = new CallbackRegistry<>();
-    private final Supplier<? extends CompletableCompletionStage<?>> completionStageFactory;
-
-    /**
-     * Creates SimpleCompletionStage.
-     *
-     * @param defaultExecutor executor to be used for all async method without executor parameter.
-     */
-    public SimpleCompletionStage(Executor defaultExecutor) {
-    	this(defaultExecutor, () -> new SimpleCompletionStage<>(defaultExecutor));
-    }
+    private final CompletableCompletionStageFactory completionStageFactory;
 
     /**
      * Creates SimpleCompletionStage.
@@ -50,7 +42,7 @@ public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implemen
      * @param defaultExecutor executor to be used for all async method without executor parameter.
      * @param completionStageFactory factory to create next stages
      */
-    public SimpleCompletionStage(Executor defaultExecutor, Supplier<? extends CompletableCompletionStage<?>> completionStageFactory) {
+    public SimpleCompletionStage(Executor defaultExecutor, CompletableCompletionStageFactory completionStageFactory) {
         super(defaultExecutor);
         this.completionStageFactory = completionStageFactory;
     }
@@ -248,9 +240,8 @@ public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implemen
     }
 
 
-    @SuppressWarnings("unchecked")
 	private <R> CompletableCompletionStage<R> newCompletableCompletionStage() {
-        return (CompletableCompletionStage<R>) completionStageFactory.get();
+        return completionStageFactory.createCompletionStage();
     }
 
 
@@ -301,8 +292,6 @@ public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implemen
 
     /**
      * Wraps exception completes exceptionally.
-     *
-     * @param e the exception
      */
     private static Consumer<Throwable> handleFailure(CompletableCompletionStage<?> s) {
     	return (e) -> handleFailure(s, e);
