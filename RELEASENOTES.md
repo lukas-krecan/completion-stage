@@ -1,3 +1,9 @@
+## 0.0.8
+* SimpleCompletionStage made extensible
+
+## 0.0.7
+* Incorrect release - do not use
+
 ## 0.0.6
 * Added CompletableCompletionStage.doCompleteMethods
 
