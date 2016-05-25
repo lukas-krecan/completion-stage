@@ -1,4 +1,4 @@
-CompletionStage alternative implementation
+CompletionStage alternative implementation [![Build Status](https://travis-ci.org/lukas-krecan/completion-stage.png?branch=master)](https://travis-ci.org/lukas-krecan/completion-stage) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.javacrumbs.completion-stage/completion-stage/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.javacrumbs.completion-stage/completion-stage)
 ==========================================
 
 An alternative implementation to Java 8 [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html).
