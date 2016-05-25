@@ -1,3 +1,6 @@
+## 0.0.7
+* SimpleCompletionStage made extensible
+
 ## 0.0.6
 * Added CompletableCompletionStage.doCompleteMethods
 
