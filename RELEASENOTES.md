@@ -1,3 +1,6 @@
+## 0.0.9
+* Fine grained locks
+
 ## 0.0.8
 * SimpleCompletionStage made extensible
 

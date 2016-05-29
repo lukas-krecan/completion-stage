@@ -18,7 +18,7 @@ Add Maven dependency
     <dependency>
         <groupId>net.javacrumbs.completion-stage</groupId>
         <artifactId>completion-stage</artifactId>
-        <version>0.0.8</version>
+        <version>0.0.9</version>
     </dependency>
 
 And enjoy
