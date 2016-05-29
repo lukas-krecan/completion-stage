@@ -166,8 +166,9 @@ final class CallbackRegistry<T> {
 
         @Override
         protected void callSuccessCallbacks(S result) {
-            while (!callbacks.isEmpty()) {
-                callbacks.poll().callSuccessCallback(result);
+            // no need to remove callbacks from the queue, this instance will be thrown away at once
+            for (CallbackHolder<? super S> callback : callbacks) {
+                callback.callSuccessCallback(result);
             }
         }
 
@@ -178,8 +179,9 @@ final class CallbackRegistry<T> {
 
         @Override
         protected void callFailureCallbacks(Throwable failure) {
-            while (!callbacks.isEmpty()) {
-                callbacks.poll().callFailureCallback(failure);
+            // no need to remove callbacks from the queue, this instance will be thrown away at once
+            for (CallbackHolder<? super S> callback : callbacks) {
+                callback.callFailureCallback(failure);
             }
         }
 
