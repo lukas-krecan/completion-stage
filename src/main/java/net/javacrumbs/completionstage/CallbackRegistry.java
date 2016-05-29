@@ -1,12 +1,12 @@
 /**
  * Copyright 2009-2015 the original author or authors.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,20 +22,22 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 /**
- * Registry for Consumer callbacks. Works as a state machine switching between NewEmpty, New, Success and Failure state.
+ * Registry for Consumer callbacks. Works as a state machine switching between InitialState, IntermediateState, Success and Failure state.
  * <p/>
  * <p>Inspired by {@code org.springframework.util.concurrent.ListenableFutureCallbackRegistry} and
  * {@code com.google.common.util.concurrent.ExecutionList}</p>
+ * <p>
+ * Explicit synchronization only around blocks responsible for state switching.
  */
 final class CallbackRegistry<T> {
-    private State<T> state = NewEmptyState.instance();
+    private State<T> state = InitialState.instance();
 
     private final Object mutex = new Object();
 
     /**
      * Adds the given callbacks to this registry.
      */
-    public void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+    void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         Objects.requireNonNull(successCallback, "'successCallback' must not be null");
         Objects.requireNonNull(failureCallback, "'failureCallback' must not be null");
         Objects.requireNonNull(executor, "'executor' must not be null");
@@ -51,15 +53,18 @@ final class CallbackRegistry<T> {
      * @param result the result value
      * @return true if this result will be used (first result registered)
      */
-    public boolean success(T result) {
+    boolean success(T result) {
+        State<T> oldState;
         synchronized (mutex) {
             if (state.isCompleted()) {
                 return false;
             }
-
-            state = state.success(result);
-            return true;
+            oldState = state;
+            state = state.getSuccessState(result);
         }
+        oldState.callSuccessCallbacks(result);
+        return true;
+
     }
 
     /**
@@ -68,15 +73,17 @@ final class CallbackRegistry<T> {
      * @param failure the exception
      * @return true if this result will be used (first result registered)
      */
-    public boolean failure(Throwable failure) {
+    boolean failure(Throwable failure) {
+        State<T> oldState;
         synchronized (mutex) {
             if (state.isCompleted()) {
                 return false;
             }
-
-            state = state.failure(failure);
-            return true;
+            oldState = state;
+            state = state.getFailureState(failure);
         }
+        oldState.callFailureCallbacks(failure);
+        return true;
     }
 
     /**
@@ -86,24 +93,22 @@ final class CallbackRegistry<T> {
     private static abstract class State<S> {
         protected abstract State<S> addCallbacks(Consumer<? super S> successCallback, Consumer<Throwable> failureCallback, Executor executor);
 
-        protected State<S> success(S result) {
+        protected State<S> getSuccessState(S result) {
             throw new IllegalStateException("success method should not be called multiple times");
         }
 
-        protected State<S> failure(Throwable failure) {
+        protected void callSuccessCallbacks(S result) {
+        }
+
+        protected State<S> getFailureState(Throwable failure) {
             throw new IllegalStateException("failure method should not be called multiple times");
+        }
+
+        protected void callFailureCallbacks(Throwable failure) {
         }
 
         protected boolean isCompleted() {
             return true;
-        }
-
-        protected static <S> void callCallback(Consumer<S> callback, S value, Executor executor) {
-            executor.execute(() -> callback.accept(value));
-        }
-
-        protected static <S> void callCallback(CallbackExecutorPair<S> callbackExecutorPair, S result) {
-            callCallback(callbackExecutorPair.getCallback(), result, callbackExecutorPair.getExecutor());
         }
     }
 
@@ -111,23 +116,23 @@ final class CallbackRegistry<T> {
      * Result is not known yet and no callbacks registered. Using shared instance so we do not allocate instance where
      * it may not be needed.
      */
-    private static class NewEmptyState<S> extends State<S> {
-        private static final NewEmptyState<Object> instance = new NewEmptyState<>();
+    private static class InitialState<S> extends State<S> {
+        private static final InitialState<Object> instance = new InitialState<>();
 
         @Override
         protected State<S> addCallbacks(Consumer<? super S> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
-            NewState<S> newState = new NewState<>();
-            newState.addCallbacks(successCallback, failureCallback, executor);
-            return newState;
+            IntermediateState<S> intermediateState = new IntermediateState<>();
+            intermediateState.addCallbacks(successCallback, failureCallback, executor);
+            return intermediateState;
         }
 
         @Override
-        protected State<S> success(S result) {
+        protected State<S> getSuccessState(S result) {
             return new SuccessState<>(result);
         }
 
         @Override
-        protected State<S> failure(Throwable failure) {
+        protected State<S> getFailureState(Throwable failure) {
             return new FailureState<>(failure);
         }
 
@@ -145,31 +150,37 @@ final class CallbackRegistry<T> {
     /**
      * Result is not known yet.
      */
-    private static class NewState<S> extends State<S> {
-        private final Queue<CallbackExecutorPair<? super S>> successCallbacks = new LinkedList<>();
-        private final Queue<CallbackExecutorPair<Throwable>> failureCallbacks = new LinkedList<>();
+    private static class IntermediateState<S> extends State<S> {
+        private final Queue<CallbackHolder<? super S>> callbacks = new LinkedList<>();
 
         @Override
         protected State<S> addCallbacks(Consumer<? super S> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
-            successCallbacks.add(new CallbackExecutorPair<>(successCallback, executor));
-            failureCallbacks.add(new CallbackExecutorPair<>(failureCallback, executor));
+            callbacks.add(new CallbackHolder<>(successCallback, failureCallback, executor));
             return this;
         }
 
         @Override
-        protected State<S> success(S result) {
-            while (!successCallbacks.isEmpty()) {
-                callCallback(successCallbacks.poll(), result);
-            }
+        protected State<S> getSuccessState(S result) {
             return new SuccessState<>(result);
         }
 
         @Override
-        protected State<S> failure(Throwable failure) {
-            while (!failureCallbacks.isEmpty()) {
-                callCallback(failureCallbacks.poll(), failure);
+        protected void callSuccessCallbacks(S result) {
+            while (!callbacks.isEmpty()) {
+                callbacks.poll().callSuccessCallback(result);
             }
+        }
+
+        @Override
+        protected State<S> getFailureState(Throwable failure) {
             return new FailureState<>(failure);
+        }
+
+        @Override
+        protected void callFailureCallbacks(Throwable failure) {
+            while (!callbacks.isEmpty()) {
+                callbacks.poll().callFailureCallback(failure);
+            }
         }
 
         @Override
@@ -213,22 +224,28 @@ final class CallbackRegistry<T> {
     }
 
 
-    private static final class CallbackExecutorPair<S> {
-        private final Consumer<S> callback;
+    private static final class CallbackHolder<S> {
+        private final Consumer<S> successCallback;
+        private final Consumer<Throwable> failureCallback;
         private final Executor executor;
 
-        private CallbackExecutorPair(Consumer<S> callback, Executor executor) {
-            this.callback = callback;
+        private CallbackHolder(Consumer<S> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+            this.successCallback = successCallback;
+            this.failureCallback = failureCallback;
             this.executor = executor;
         }
 
-        public Consumer<S> getCallback() {
-            return callback;
+        void callSuccessCallback(S result) {
+            callCallback(successCallback, result, executor);
         }
 
-        public Executor getExecutor() {
-            return executor;
+        void callFailureCallback(Throwable failure) {
+            callCallback(failureCallback, failure, executor);
         }
+    }
+
+    private static <T> void callCallback(Consumer<T> callback, T value, Executor executor) {
+        executor.execute(() -> callback.accept(value));
     }
 
 }
