@@ -81,31 +81,31 @@ the default choice for async methods.
 
 # Release notes
 
-## 0.0.9
+### 0.0.9
 * Fine grained locks
 
-## 0.0.8
+### 0.0.8
 * SimpleCompletionStage made extensible
 
-## 0.0.7
+### 0.0.7
 * Incorrect release - do not use
 
-## 0.0.6
+### 0.0.6
 * Added CompletableCompletionStage.doCompleteMethods
 
-## 0.0.5
+### 0.0.5
 * Added factory methods to CompletionStageFactory
 
-## 0.0.4
+### 0.0.4
 * Small optimizations
 
-## 0.0.3
+### 0.0.3
 * thenComposeAsync error handling fixed
 * thenCombineAsync uses correct executor
 * whenCompleteAsync passes value to next stage
 * Internal refactoring
 
-## 0.0.2
+### 0.0.2
 * Fixed error handling in thenCombine function
 
 
