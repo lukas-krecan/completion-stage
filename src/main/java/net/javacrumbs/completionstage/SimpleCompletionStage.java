@@ -316,7 +316,7 @@ public class SimpleCompletionStage<T> extends CompletionStageAdapter<T> implemen
         }
     }
 
-    protected void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
+    private void addCallbacks(Consumer<? super T> successCallback, Consumer<Throwable> failureCallback, Executor executor) {
         callbackRegistry.addCallbacks(successCallback, failureCallback, executor);
     }
 }
